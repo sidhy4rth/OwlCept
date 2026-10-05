@@ -34,6 +34,18 @@
       "description": "Shows a button on blocked pages that opens Google Safe Browsing's report form. Nothing is sent unless the user clicks.",
       "type": "boolean"
     },
+    "blockedHosts": {
+      "title": "Blocked hosts",
+      "description": "A command that would contact one of these hosts (or a subdomain) is always blocked. Generate the list from the fleet view's lure sites.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "approvedCommands": {
+      "title": "Approved commands",
+      "description": "SHA-256 fingerprints (from 'owlcept hash') of exact commands that never prompt, such as the organisation's own setup scripts.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
     "deviceLabel": {
       "title": "Device name in exports",
       "description": "Label shown for this device in the fleet view.",

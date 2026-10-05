@@ -67,6 +67,9 @@ const DETAILS: Record<Lang, Table> = {
     'lure-words-nearby': 'The page mentions keys like {words}.',
     'fake-captcha': 'The "verify you are human" box was not a real CAPTCHA.',
     'analysis-incomplete': 'This text was too long or tangled to check completely, so OwlCept is being careful.',
+    'org-blocked-host': 'It contacts {host}, a site your organisation has blocked.',
+    'org-blocked-origin': 'You copied it from {host}, a site your organisation has blocked.',
+    'org-approved': 'Your organisation has approved this exact command.',
     'from-app': 'It came from {app}.',
     'from-chat': 'It came from a chat message in {app}. Scammers send commands in chats while pretending to be support staff or a colleague.',
     'from-email': 'It came from an email in {app}. Real companies do not email you commands to run.',
@@ -111,6 +114,9 @@ const DETAILS: Record<Lang, Table> = {
     'lure-words-nearby': 'पेज पर {words} जैसी कुंजियों का ज़िक्र है।',
     'fake-captcha': '"मैं इंसान हूँ" वाला बॉक्स असली CAPTCHA नहीं था।',
     'analysis-incomplete': 'यह टेक्स्ट पूरी तरह जाँचने के लिए बहुत लंबा या उलझा हुआ था, इसलिए OwlCept सावधानी बरत रहा है।',
+    'org-blocked-host': 'यह {host} से जुड़ता है, जिसे आपके संगठन ने ब्लॉक किया है।',
+    'org-blocked-origin': 'आपने इसे {host} से कॉपी किया, जिसे आपके संगठन ने ब्लॉक किया है।',
+    'org-approved': 'आपके संगठन ने ठीक इसी कमांड को मंज़ूरी दी है।',
     'from-app': 'यह {app} से आया था।',
     'from-chat': 'यह {app} के एक चैट संदेश से आया। धोखेबाज़ सपोर्ट कर्मचारी या सहकर्मी बनकर चैट में कमांड भेजते हैं।',
     'from-email': 'यह {app} के एक ईमेल से आया। असली कंपनियाँ आपको चलाने के लिए कमांड ईमेल नहीं करतीं।',
@@ -155,6 +161,9 @@ const DETAILS: Record<Lang, Table> = {
     'lure-words-nearby': 'ಪುಟದಲ್ಲಿ {words} ನಂತಹ ಕೀಗಳ ಉಲ್ಲೇಖವಿದೆ.',
     'fake-captcha': '"ನಾನು ಮನುಷ್ಯ" ಎಂಬ ಬಾಕ್ಸ್ ನಿಜವಾದ CAPTCHA ಆಗಿರಲಿಲ್ಲ.',
     'analysis-incomplete': 'ಈ ಪಠ್ಯವನ್ನು ಸಂಪೂರ್ಣವಾಗಿ ಪರಿಶೀಲಿಸಲು ಅದು ತುಂಬಾ ಉದ್ದ ಅಥವಾ ಜಟಿಲವಾಗಿತ್ತು, ಆದ್ದರಿಂದ OwlCept ಎಚ್ಚರಿಕೆ ವಹಿಸುತ್ತಿದೆ.',
+    'org-blocked-host': 'ಇದು ನಿಮ್ಮ ಸಂಸ್ಥೆ ನಿರ್ಬಂಧಿಸಿರುವ {host} ಅನ್ನು ಸಂಪರ್ಕಿಸುತ್ತದೆ.',
+    'org-blocked-origin': 'ನೀವು ಇದನ್ನು ನಿಮ್ಮ ಸಂಸ್ಥೆ ನಿರ್ಬಂಧಿಸಿರುವ {host} ನಿಂದ ನಕಲಿಸಿದ್ದೀರಿ.',
+    'org-approved': 'ನಿಮ್ಮ ಸಂಸ್ಥೆ ಇದೇ ಕಮಾಂಡ್‌ಗೆ ಅನುಮೋದನೆ ನೀಡಿದೆ.',
     'from-app': 'ಇದು {app} ನಿಂದ ಬಂದಿದೆ.',
     'from-chat': 'ಇದು {app} ನಲ್ಲಿನ ಒಂದು ಚಾಟ್ ಸಂದೇಶದಿಂದ ಬಂದಿದೆ. ವಂಚಕರು ಸಹಾಯ ಸಿಬ್ಬಂದಿ ಅಥವಾ ಸಹೋದ್ಯೋಗಿಯಂತೆ ನಟಿಸಿ ಚಾಟ್‌ನಲ್ಲಿ ಕಮಾಂಡ್‌ಗಳನ್ನು ಕಳುಹಿಸುತ್ತಾರೆ.',
     'from-email': 'ಇದು {app} ನಲ್ಲಿನ ಒಂದು ಇಮೇಲ್‌ನಿಂದ ಬಂದಿದೆ. ನಿಜವಾದ ಕಂಪನಿಗಳು ಚಲಾಯಿಸಲು ಕಮಾಂಡ್‌ಗಳನ್ನು ಇಮೇಲ್ ಮಾಡುವುದಿಲ್ಲ.',
@@ -195,7 +204,7 @@ const ADVICE: Record<Lang, Table> = {
 };
 
 // Findings that only make sense when explaining why something was allowed.
-const REASSURING = new Set(['installer', 'same-site', 'docs-site']);
+const REASSURING = new Set(['installer', 'same-site', 'docs-site', 'org-approved']);
 const MAX_DETAILS = 5;
 
 function fill(template: string, params: Record<string, string> | undefined): string {
@@ -227,8 +236,10 @@ export function explain(verdict: Verdict, custody: CustodyRecord | null | undefi
   return { lang, headline: HEADLINES[lang][headlineKey], details, provenance, advice: ADVICE[lang][verdict.action] };
 }
 
-/** Behaviour first (what it does), then context (why we think it is a trick). */
+/** Organisation rules first, then behaviour (what it does), then context (why we think it is a trick). */
 function order(f: Finding): number {
+  // The organisation's own decision is the first thing to say.
+  if (f.id.startsWith('org-blocked')) return -1;
   return f.kind === 'behaviour' ? 0 : f.kind === 'obfuscation' ? 1 : 2;
 }
 

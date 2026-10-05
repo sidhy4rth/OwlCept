@@ -116,7 +116,7 @@ const outcomes = samples.map(evaluate);
 // something even when the corpus raises none of them.
 const src = ['rules.ts', 'score.ts', 'index.ts'].map((f) => readFileSync(`${root}packages/engine/src/${f}`, 'utf8')).join('\n');
 const findingIds = [...new Set([...src.matchAll(/(?:\bid: |\badd\()'([a-z][a-z-]+)'/g)].map((m) => m[1]).concat([...src.matchAll(/'(from-[a-z]+)'/g)].map((m) => m[1]), 'obfuscated', 'target-run', 'target-explorer'))].sort();
-const REASSURING = new Set(['installer', 'same-site', 'docs-site']);
+const REASSURING = new Set(['installer', 'same-site', 'docs-site', 'org-approved']);
 const PARAMS = { host: 'example.test', words: 'Win+R', app: 'WhatsApp', text: 'I am not a robot', tricks: 'base64' };
 const explainFailures: string[] = [];
 let explained = 0;

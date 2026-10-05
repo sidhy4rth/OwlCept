@@ -34,6 +34,15 @@ export interface AnalyzeContext {
    * input that outlasts the budget gets at least a warning rather than nothing.
    */
   budgetMs?: number;
+  /** Rules set by the organisation (browser policy), applied on every checkpoint. */
+  org?: OrgRules;
+}
+
+export interface OrgRules {
+  /** Hosts (and their subdomains) a command may never contact, e.g. lure sites from the fleet view. */
+  blockedHosts?: string[];
+  /** SHA-256 (hex) of normalizeForHash(text) for exact commands IT has approved. */
+  approvedHashes?: string[];
 }
 
 export type Severity = 'info' | 'low' | 'medium' | 'high' | 'critical';

@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v7
       - name: Write the policy
         shell: pwsh
-        run: ./deploy/windows/Set-OwlCeptPolicy.ps1 -Mode strict -Language hi -TrustedSites docs.example-college.edu.in,'bad host!',Learn.Microsoft.com -HelpDeskWhatsApp '+919800000000' -AllowCopyAnyway $false -ReportLures $true -DeviceLabel 'Lab PC 1'
+        run: ./deploy/windows/Set-OwlCeptPolicy.ps1 -Mode strict -Language hi -TrustedSites docs.example-college.edu.in,'bad host!',Learn.Microsoft.com -HelpDeskWhatsApp '+919800000000' -AllowCopyAnyway $false -ReportLures $true -DeviceLabel 'Lab PC 1' -BlockedHosts Verify-Human.example-lure.test,'not valid!' -ApprovedCommands ('a' * 64)
       - name: Read it back the way the browsers will
         shell: pwsh
         run: |
@@ -31,6 +31,8 @@ jobs:
             if ($p.allowCopyAnyway -ne 0 -or $p.reportLures -ne 1) { throw "DWORD values wrong under $k" }
             $sites = Get-ItemProperty "$k\trustedSites"
             if ($sites.'1' -ne 'docs.example-college.edu.in' -or $sites.'2' -ne 'learn.microsoft.com' -or $sites.'3') { throw "trustedSites list wrong under $k" }
+            $bh = Get-ItemProperty "$k\blockedHosts"; $ac = Get-ItemProperty "$k\approvedCommands"
+            if ($bh.'1' -ne 'verify-human.example-lure.test' -or $bh.'2' -or $ac.'1' -ne ('a' * 64)) { throw "org lists wrong under $k" }
             Write-Output "ok: $k"
           }
       - name: Remove it

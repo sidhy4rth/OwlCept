@@ -28,6 +28,8 @@ user's choice and shows with a 🔒 in the popup and dashboard.
 | `allowCopyAnyway` | boolean | `false` removes "Copy anyway" from blocks |
 | `reportLures` | boolean | Offer "Report this page" (opens Google Safe Browsing's form; nothing is sent unless clicked) |
 | `deviceLabel` | text | This PC's name in fleet exports |
+| `blockedHosts` | list of hosts | **Organisation only.** A command that would contact one of these (or a subdomain) is always blocked; the fleet view generates this list |
+| `approvedCommands` | list of SHA-256 | **Organisation only.** Exact commands that never prompt, such as the college's setup script. Get a fingerprint with `owlcept hash "<command>"` |
 
 ### Windows: script
 

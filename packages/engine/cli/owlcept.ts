@@ -11,7 +11,7 @@
 // Exit codes for check and oauth: 0 allow, 1 warn, 2 block, 64 usage error.
 
 import { createInterface } from 'node:readline';
-import { analyze, checkOAuthPaste, describeTrick, explain, explainConsentFix } from '../src/index.ts';
+import { analyze, checkOAuthPaste, describeTrick, explain, explainConsentFix, normalizeForHash, sha256Hex } from '../src/index.ts';
 import type { AnalyzeContext, CustodyRecord, Lang, PasteTarget, Verdict } from '../src/types.ts';
 
 const VERSION = '0.2.0';
@@ -23,6 +23,7 @@ const USAGE = `owlcept ${VERSION}: explain what a pasted command would do
 
   owlcept check "<command>" [options]     check a command (use - to read it from stdin)
   owlcept oauth "<text>" --page <url>     ConsentFix check: is this a sign-in code pasted into the wrong site?
+  owlcept hash "<command>"                fingerprint for the approvedCommands policy (- reads stdin)
   owlcept serve                           JSON lines over stdin/stdout, for the Windows agent
   owlcept --version
 
@@ -35,6 +36,8 @@ check options
   --scripted                              a page script wrote the clipboard
   --hidden                                the copied text was not visible on the page
   --fake-captcha                          a CAPTCHA not served by a real provider was on the page
+  --blocked-host <host>                   apply an organisation blocklist entry (repeatable)
+  --approved <sha256>                     apply an approved-command fingerprint (repeatable)
   --trace                                 show how the command was decoded, step by step
   --json                                  print the verdict and explanation as JSON
 
@@ -57,7 +60,7 @@ function parse(argv: string[]): { cmd: string; args: string[]; flags: Flags } {
     else {
       const v = rest[++i];
       if (v === undefined) usage(`--${key} needs a value`);
-      flags[key] = key === 'lure' ? [...((flags.lure as string[]) ?? []), v] : v;
+      flags[key] = ['lure', 'blocked-host', 'approved'].includes(key) ? [...((flags[key] as string[]) ?? []), v] : v;
     }
   }
   return { cmd, args, flags };
@@ -94,7 +97,8 @@ function contextFrom(flags: Flags): { ctx: AnalyzeContext; lang: Lang } {
       fakeCaptcha: !!flags['fake-captcha'],
     };
   }
-  return { ctx: { target: target as PasteTarget, custody }, lang: lang as Lang };
+  const org = flags['blocked-host'] || flags.approved ? { blockedHosts: (flags['blocked-host'] as string[]) ?? [], approvedHashes: (flags.approved as string[]) ?? [] } : undefined;
+  return { ctx: { target: target as PasteTarget, custody, org }, lang: lang as Lang };
 }
 
 const COLOR = process.stdout.isTTY && !process.env.NO_COLOR;
@@ -168,6 +172,10 @@ async function main(): Promise<void> {
       process.stdout.write(`${paint('1;31', `BLOCK  ${e.headline}`)}\n  • ${e.detail}\n  ${e.advice}\n`);
     } else process.stdout.write(`${paint('1;32', 'ALLOW')}  no sign-in code for another site\n`);
     process.exit(d.block ? EXIT.block : EXIT.allow);
+  }
+  if (cmd === 'hash') {
+    const text = await readInput(args[0]);
+    return void process.stdout.write(`${sha256Hex(normalizeForHash(text))}\n`);
   }
   if (cmd === 'serve') return serve();
   usage(`unknown command "${cmd}"`);

@@ -20,8 +20,13 @@ export function clean(raw: Record<string, unknown> | undefined): Partial<Setting
   if (typeof raw.reportLures === 'boolean') out.reportLures = raw.reportLures;
   if (typeof raw.allowCopyAnyway === 'boolean') out.allowCopyAnyway = raw.allowCopyAnyway;
   if (typeof raw.deviceLabel === 'string') out.deviceLabel = raw.deviceLabel.slice(0, 80);
+  if (Array.isArray(raw.blockedHosts)) out.blockedHosts = [...new Set(raw.blockedHosts.map((s) => (typeof s === 'string' ? normalizeSite(s) : '')).filter(Boolean))].slice(0, 5000);
+  if (Array.isArray(raw.approvedCommands)) out.approvedCommands = [...new Set(raw.approvedCommands.filter((h): h is string => typeof h === 'string' && /^[0-9a-f]{64}$/i.test(h.trim())).map((h) => h.trim().toLowerCase()))].slice(0, 5000);
   return out;
 }
+
+/** Settings only an organisation can set; values in local storage are ignored. */
+const ORG_ONLY: (keyof Settings)[] = ['blockedHosts', 'approvedCommands'];
 
 async function managed(): Promise<Partial<Settings>> {
   try {
@@ -33,8 +38,10 @@ async function managed(): Promise<Partial<Settings>> {
 
 export async function loadSettings(): Promise<{ settings: Settings; locked: (keyof Settings)[] }> {
   const [{ settings: local }, policy] = await Promise.all([chrome.storage.local.get('settings'), managed()]);
+  const mine = clean(local as Record<string, unknown>);
+  for (const k of ORG_ONLY) delete mine[k];
   return {
-    settings: { ...DEFAULT_SETTINGS, ...clean(local as Record<string, unknown>), ...policy },
+    settings: { ...DEFAULT_SETTINGS, ...mine, ...policy },
     locked: Object.keys(policy) as (keyof Settings)[],
   };
 }
@@ -44,7 +51,7 @@ export async function saveSettings(patch: Partial<Settings>): Promise<void> {
   const { locked } = await loadSettings();
   const { settings } = (await chrome.storage.local.get('settings')) as { settings?: Record<string, unknown> };
   const next = { ...clean(settings), ...clean(patch as Record<string, unknown>) };
-  for (const k of locked) delete next[k];
+  for (const k of [...locked, ...ORG_ONLY]) delete next[k];
   await chrome.storage.local.set({ settings: next });
 }
 

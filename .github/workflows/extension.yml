@@ -30,6 +30,10 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Load the extension in Chromium and check copy, paste and popup
         run: node scripts/ext-e2e.mjs
+      - name: Organisation policy, end to end (real managed policy file read by Chromium)
+        run: |
+          sudo "$(which node)" scripts/ext-policy-e2e.mjs --write-policy
+          node scripts/ext-policy-e2e.mjs
       - uses: actions/upload-artifact@v7
         with:
           name: owlcept-extension

@@ -108,6 +108,8 @@ export interface RuleResult {
   hosts: HostInfo[];
   /** True when the command fetches something and runs it. */
   downloadExec: boolean;
+  /** True when the command downloads or executes anything, i.e. its hosts would really be contacted. */
+  reachesOut: boolean;
 }
 
 export function runRules(decoded: Decoded): RuleResult {
@@ -166,5 +168,5 @@ export function runRules(decoded: Decoded): RuleResult {
     add('obfuscated', 'obfuscation', Math.min(obf, OBFUSCATION_CAP), obf >= 30 ? 'high' : 'medium', { tricks: tricks.join(', ') });
   }
 
-  return { findings, hosts, downloadExec };
+  return { findings, hosts, downloadExec, reachesOut: downloads || executes };
 }

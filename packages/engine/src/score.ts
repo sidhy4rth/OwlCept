@@ -37,7 +37,12 @@ export interface ScoreResult {
   context: Finding[];
 }
 
-export function score(behaviour: Finding[], hosts: HostInfo[], ctx: AnalyzeContext): ScoreResult {
+export function score(behaviour: Finding[], hosts: HostInfo[], ctx: AnalyzeContext, reachesOut = true, fingerprint?: string): ScoreResult {
+  // An exact command the organisation approved passes, whatever it looks like.
+  const hash = (fingerprint ?? ctx.custody?.hash)?.toLowerCase();
+  if (hash && ctx.org?.approvedHashes?.some((h) => h.toLowerCase() === hash)) {
+    return { action: 'allow', risk: 0, context: [{ id: 'org-approved', kind: 'context', weight: 0, severity: 'info' }] };
+  }
   const base = Math.min(100, behaviour.reduce((s, f) => s + f.weight, 0));
   const context: Finding[] = [];
   const c = ctx.custody ?? null;
@@ -80,13 +85,24 @@ export function score(behaviour: Finding[], hosts: HostInfo[], ctx: AnalyzeConte
     }
   }
 
-  if (base < BEHAVIOUR_FLOOR) return { action: 'allow', risk: base, context };
+  // Organisation blocklist: contacting a blocked host always blocks; copying from a
+  // blocked site adds weight but, like any provenance, never prompts on its own.
+  const blocked = (host: string) => ctx.org?.blockedHosts?.some((b) => {
+    const x = b.toLowerCase();
+    return host === x || host.endsWith(`.${x}`);
+  });
+  const hitHost = reachesOut ? hosts.find((h) => blocked(h.host)) : undefined;
+  if (hitHost) context.push({ id: 'org-blocked-host', kind: 'context', weight: 100, severity: 'critical', params: { host: hitHost.host } });
+  else if (originHost && blocked(originHost)) context.push({ id: 'org-blocked-origin', kind: 'context', weight: 40, severity: 'high', params: { host: originHost } });
+
+  if (base < BEHAVIOUR_FLOOR && !hitHost) return { action: 'allow', risk: base, context };
 
   let risk = base + context.reduce((s, f) => s + f.weight, 0);
 
   // A page that wrote text you never saw, or told you to press Win+R, is the attack.
   const deceived = context.some((f) => f.id === 'hidden-copy' || f.id === 'lure-words');
   if (deceived) risk = Math.max(risk, 75);
+  if (hitHost) risk = 100;
 
   // Trusted-origin discounts never silence a critical behaviour.
   if (behaviour.some((f) => f.severity === 'critical')) risk = Math.max(risk, WARN_AT);

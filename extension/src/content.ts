@@ -91,7 +91,7 @@ async function onCopy(text: string, scripted: boolean): Promise<string | null> {
     fakeCaptcha,
     time: Date.now(),
   };
-  const verdict = analyze(text, { target: 'unknown', custody });
+  const verdict = analyze(text, { target: 'unknown', custody, org: { blockedHosts: settings.blockedHosts, approvedHashes: settings.approvedCommands } });
   const ids = verdict.findings.map((f) => f.id);
   const d = decide({ action: verdict.action, mode: settings.mode, trustedSites: settings.trustedSites, host: pageHost(), agentConnected });
   void send({ type: 'custody', record: custody, action: d.log, risk: verdict.risk, ids, note: d.note, shown: d.show !== 'none' });

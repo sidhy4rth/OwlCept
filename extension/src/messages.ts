@@ -23,9 +23,13 @@ export interface Settings {
   deviceLabel: string;
   /** Whether "Copy anyway" is offered on a block. Organisations can turn it off. */
   allowCopyAnyway: boolean;
+  /** Organisation only: hosts a command may never contact (from the fleet view). */
+  blockedHosts: string[];
+  /** Organisation only: SHA-256 fingerprints of exact commands that never prompt. */
+  approvedCommands: string[];
 }
 
-export const DEFAULT_SETTINGS: Settings = { lang: 'auto', contact: '', mode: 'smart', trustedSites: [], reportLures: false, deviceLabel: '', allowCopyAnyway: true };
+export const DEFAULT_SETTINGS: Settings = { lang: 'auto', contact: '', mode: 'smart', trustedSites: [], reportLures: false, deviceLabel: '', allowCopyAnyway: true, blockedHosts: [], approvedCommands: [] };
 
 export type ToBackground =
   | { type: 'status' }

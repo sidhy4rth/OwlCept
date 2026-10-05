@@ -13,6 +13,10 @@
   .\Set-OwlCeptPolicy.ps1 -Mode smart -TrustedSites docs.college.edu.in,github.com -HelpDeskWhatsApp 919800000000 -AllowCopyAnyway $false
 
 .EXAMPLE
+  # Block the lure sites found in the fleet view; approve the college's setup script (fingerprint from: owlcept hash "<command>")
+  .\Set-OwlCeptPolicy.ps1 -BlockedHosts verify-human.example-lure.test -ApprovedCommands 3f9a...64 hex digits
+
+.EXAMPLE
   .\Set-OwlCeptPolicy.ps1 -Remove
 #>
 [CmdletBinding(SupportsShouldProcess)]
@@ -24,6 +28,8 @@ param(
   [Nullable[bool]] $AllowCopyAnyway,
   [Nullable[bool]] $ReportLures,
   [string] $DeviceLabel,
+  [string[]] $BlockedHosts,
+  [ValidatePattern('^[0-9a-fA-F]{64}$')] [string[]] $ApprovedCommands,
   [ValidateSet('Chrome', 'Edge')] [string[]] $Browsers = @('Chrome', 'Edge'),
   [string] $ExtensionId = 'jjkhmdbenclipofjaeeblabpmjdcibpi',
   [switch] $Remove
@@ -52,14 +58,20 @@ foreach ($browser in $Browsers) {
     if ($DeviceLabel)      { Set-ItemProperty -Path $key -Name deviceLabel -Value $DeviceLabel -Type String }
     if ($null -ne $AllowCopyAnyway) { Set-ItemProperty -Path $key -Name allowCopyAnyway -Value ([int]$AllowCopyAnyway) -Type DWord }
     if ($null -ne $ReportLures)     { Set-ItemProperty -Path $key -Name reportLures -Value ([int]$ReportLures) -Type DWord }
-    if ($PSBoundParameters.ContainsKey('TrustedSites')) {
-      # Browsers read a list policy as a subkey with values named 1, 2, 3, ...
-      $list = Join-Path $key 'trustedSites'
+    # Browsers read a list policy as a subkey with values named 1, 2, 3, ...
+    $lists = @{
+      trustedSites     = @{ Given = $PSBoundParameters.ContainsKey('TrustedSites'); Items = $TrustedSites | Where-Object { $_ -match '^[A-Za-z0-9.-]+$' } | ForEach-Object { $_.ToLowerInvariant() } }
+      blockedHosts     = @{ Given = $PSBoundParameters.ContainsKey('BlockedHosts'); Items = $BlockedHosts | Where-Object { $_ -match '^[A-Za-z0-9.-]+$' } | ForEach-Object { $_.ToLowerInvariant() } }
+      approvedCommands = @{ Given = $PSBoundParameters.ContainsKey('ApprovedCommands'); Items = $ApprovedCommands | ForEach-Object { $_.ToLowerInvariant() } }
+    }
+    foreach ($name in $lists.Keys) {
+      if (-not $lists[$name].Given) { continue }
+      $list = Join-Path $key $name
       if (Test-Path $list) { Remove-Item $list -Recurse -Force }
       New-Item -Path $list -Force | Out-Null
       $i = 1
-      foreach ($site in $TrustedSites | Where-Object { $_ -match '^[A-Za-z0-9.-]+$' }) {
-        Set-ItemProperty -Path $list -Name "$i" -Value $site.ToLowerInvariant() -Type String
+      foreach ($item in $lists[$name].Items) {
+        Set-ItemProperty -Path $list -Name "$i" -Value $item -Type String
         $i++
       }
     }

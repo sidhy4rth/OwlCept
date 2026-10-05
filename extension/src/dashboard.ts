@@ -195,6 +195,14 @@ function renderSettings(): void {
   bind('device-label', 'deviceLabel', s.deviceLabel);
   bind('report-lures', 'reportLures', s.reportLures);
 
+  const blocked = s.blockedHosts.length, approved = s.approvedCommands.length;
+  $('org-rules').hidden = !blocked && !approved;
+  $('org-summary').textContent = [
+    blocked ? `Commands that contact ${blocked} blocked site${blocked === 1 ? '' : 's'} are always stopped.` : '',
+    approved ? `${approved} approved command${approved === 1 ? '' : 's'} never prompt${approved === 1 ? 's' : ''}.` : '',
+  ].filter(Boolean).join(' ');
+  $('org-hosts').replaceChildren(...s.blockedHosts.slice(0, 40).map((h) => el('li', { className: 'none', textContent: defang(h) })));
+
   const trustLocked = locked.has('trustedSites');
   $<HTMLInputElement>('trust-input').disabled = trustLocked;
   $('trusted').replaceChildren(

@@ -16,3 +16,10 @@ test('lure URLs are shown defanged and reported only to the public form', () => 
   assert.equal(defang('https://verify.example-lure.test/check?id=1'), 'hxxps://verify[.]example-lure[.]test/check?id=1');
   assert.equal(reportUrl('https://a.test/x?y=1'), 'https://safebrowsing.google.com/safebrowsing/report_phish/?url=https%3A%2F%2Fa.test%2Fx%3Fy%3D1');
 });
+
+test('organisation rules are validated: hosts normalised, fingerprints must be 64 hex digits', () => {
+  assert.deepEqual(
+    clean({ blockedHosts: ['HTTPS://Bad.Example.test/x', 'not a host'], approvedCommands: ['A'.repeat(64), 'abc', 'g'.repeat(64)] }),
+    { blockedHosts: ['bad.example.test'], approvedCommands: ['a'.repeat(64)] },
+  );
+});

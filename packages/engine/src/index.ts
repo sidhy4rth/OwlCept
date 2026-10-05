@@ -4,9 +4,11 @@
 import { deobfuscate } from './deobfuscate.ts';
 import { runRules } from './rules.ts';
 import { score, WARN_AT } from './score.ts';
+import { sha256Hex } from './hash.ts';
 import type { AnalyzeContext, Verdict } from './types.ts';
 
 export type * from './types.ts';
+export { sha256Hex } from './hash.ts';
 export { describeTrick, explain } from './explain.ts';
 export { detectLureText, isRealCaptchaSource } from './lure.ts';
 export { checkOAuthPaste, detectOAuthCode, explainConsentFix } from './oauth.ts';
@@ -34,8 +36,10 @@ export function analyze(text: string, ctx: AnalyzeContext = {}): Verdict {
   const started = now();
   const input = fitInput(text);
   const decoded = deobfuscate(input, started + (ctx.budgetMs ?? DEFAULT_BUDGET_MS));
-  const { findings, hosts } = runRules(decoded);
-  let { action, risk, context } = score(findings, hosts, ctx);
+  const { findings, hosts, reachesOut } = runRules(decoded);
+  // Approved commands are matched by fingerprint; compute it when the caller has none (typed text, commit check).
+  const fingerprint = ctx.org?.approvedHashes?.length ? (ctx.custody?.hash ?? sha256Hex(normalizeForHash(text))) : undefined;
+  let { action, risk, context } = score(findings, hosts, ctx, reachesOut, fingerprint);
   // Fail safe, not open: text that could not be fully decoded in time is at least a warning.
   if (decoded.incomplete) {
     context = [...context, { id: 'analysis-incomplete', kind: 'context', weight: 0, severity: 'medium' }];
