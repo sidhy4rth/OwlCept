@@ -8,7 +8,7 @@ import { mkdtempSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { parseReport } from '../packages/engine/src/index.ts';
+import { parseReport, verifyReport } from '../packages/engine/src/index.ts';
 
 const ext = new URL('../extension/dist/', import.meta.url).pathname;
 const shots = process.argv.includes('--shots') ? new URL('../docs/assets/', import.meta.url).pathname : null;
@@ -178,7 +178,11 @@ const reportHref = await dash.evaluate(() => {
 check('Report opens Safe Browsing with the lure URL; the list shows it defanged',
   reportHref.startsWith('https://safebrowsing.google.com/safebrowsing/report_phish/?url=https%3A%2F%2F') && (await dash.textContent('#history')).includes('hxxps://'));
 const [dl] = await Promise.all([dash.waitForEvent('download'), dash.click('#export-json')]);
-const exported = parseReport(readFileSync(await dl.path(), 'utf8'));
+const exportedText = readFileSync(await dl.path(), 'utf8');
+const exported = parseReport(exportedText);
+const sigCheck = await verifyReport(exportedText);
+const shownKey = (await dash.textContent('#key-id')).replace(/\s/g, '');
+check('export is signed by this device and verifies', sigCheck.status === 'verified' && sigCheck.keyId === shownKey, `key ${sigCheck.keyId}`);
 check('JSON export round-trips through the fleet parser', exported.events.length === stored.length && exported.device.label === 'Library PC 4', `${exported.events.length} events`);
 await dash.fill('#trust-input', 'https://Docs.Example.test/guide');
 await dash.click('#trust-form button');

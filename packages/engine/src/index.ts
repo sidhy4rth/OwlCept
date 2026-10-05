@@ -9,6 +9,7 @@ import type { AnalyzeContext, Verdict } from './types.ts';
 
 export type * from './types.ts';
 export { sha256Hex } from './hash.ts';
+export { canonicalJson, generateDeviceKey, keyIdOf, readSignature, signingPayload, signReport, verifyReport, type ReportSignature, type SignedReport, type Verification } from './signing.ts';
 export { buildPolicy, EXTENSION_ID, type PolicyFormat, type PolicyInput, type PolicyOutput } from './policy-gen.ts';
 export { describeTrick, explain } from './explain.ts';
 export { detectLureText, isRealCaptchaSource } from './lure.ts';

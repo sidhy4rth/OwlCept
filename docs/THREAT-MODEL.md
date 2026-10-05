@@ -25,6 +25,8 @@ where it meets them.
 | Target hopper | Moves from the Run box to Windows Terminal, File Explorer or a web form | Three checkpoints share one custody record; the commit check still reads the final command |
 | Malicious page script vs. OwlCept | Runs in the same JavaScript world as `hook.ts` | See *Where it can be beaten* |
 | Hostile export file | A crafted `.json` dropped into the fleet view | `parseReport` keeps only known fields of the right type and size; all rendering is `textContent`; CSV cells that start with `= + - @` are neutralised |
+| Export edited in transit | Changes a PC's export on a shared drive or USB stick to hide a compromise or poison the lure list | Each browser signs its exports with its own ECDSA P-256 key (private half non-extractable, kept in IndexedDB). The fleet view leaves out any file edited after signing and flags a device whose key changes. A signature proves integrity and continuity, not that the key belongs to a trusted PC: IT compares the key id with the one on that PC's dashboard |
+| Poisoned policy generation | A crafted host name in an export that ends up in a script IT runs as administrator | `buildPolicy` writes only strict host names and 64-hex fingerprints; tests feed it quote, newline, registry-key and subexpression injections |
 
 ## Trust boundaries
 
@@ -65,6 +67,7 @@ a leak is injected.
 | Activity log | `chrome.storage.local` | Last 1,000 events, until cleared from the dashboard | Time, kind, site host, finding ids, fingerprint; the full page URL **only** for blocks and ConsentFix (the lure page) |
 | Settings | `chrome.storage.local` / managed policy | Until changed | Mode, language, trusted sites, trusted contact number, device label |
 | Device id | `chrome.storage.local` | Until the extension is removed | Random UUID, used only to tell devices apart in fleet exports |
+| Device signing key | IndexedDB (extension origin) | Until the extension is removed | ECDSA P-256 key pair; the private half cannot be exported, even by the extension |
 
 What leaves the device happens only when the user clicks:
 

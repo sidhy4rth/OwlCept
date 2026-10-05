@@ -50,6 +50,8 @@
   .tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--chip); }
   .tag.audit { color: var(--amber); } .tag.strict { color: var(--indigo); }
   footer { color: var(--muted); font-size: 13px; }
+  td.sig { white-space: nowrap; font-size: 13px; font-family: ui-monospace, Consolas, monospace; } td.sig.ok { color: #15803D; } td.sig.bad { color: var(--red); font-weight: 600; } td.sig.none { color: var(--muted); }
+  @media (prefers-color-scheme: dark) { td.sig.ok { color: #4ADE80; } }
   textarea { width: 100%; font: 12.5px ui-monospace, Consolas, monospace; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--chip); color: var(--ink); margin: 4px 0 6px; }
   select { font: inherit; font-size: 14px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); max-width: 100%; }
   pre.policy { background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 10px; white-space: pre-wrap; max-height: 260px; overflow: auto; margin: 10px 0 0; }
@@ -92,10 +94,10 @@
     <section class="panel">
       <h2>Devices</h2>
       <div class="table-wrap"><table>
-        <thead><tr><th>Device</th><th>Mode</th><th class="num">Blocked</th><th class="num">Warned</th><th class="num">Sign-in codes</th><th class="num">Copied anyway</th><th>Last stopped</th><th>Exported</th></tr></thead>
+        <thead><tr><th>Device</th><th>Mode</th><th class="num">Blocked</th><th class="num">Warned</th><th class="num">Sign-in codes</th><th class="num">Copied anyway</th><th>Last stopped</th><th>Exported</th><th>Signature</th></tr></thead>
         <tbody id="devices"></tbody>
       </table></div>
-      <p class="muted" style="margin-top:8px">Devices with "copied anyway" are where a short talk helps most: someone saw a warning and went ahead.</p>
+      <p class="muted" style="margin-top:8px">Devices with "copied anyway" are where a short talk helps most: someone saw a warning and went ahead. <b>Signature</b>: each PC signs its exports with its own key. Compare the id with the one on that PC's dashboard; files edited after export are left out entirely.</p>
     </section>
 
     <div class="two">

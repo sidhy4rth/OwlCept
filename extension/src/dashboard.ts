@@ -2,7 +2,8 @@
 // fleet export and every setting. Everything is rendered with textContent;
 // hosts and URLs in the log came from web pages and are treated as untrusted.
 
-import { buildReport, reasonLabel as label, summarize, type ActivityEvent } from '@owlcept/engine';
+import { buildReport, reasonLabel as label, signReport, summarize, type ActivityEvent } from '@owlcept/engine';
+import { deviceKeyId, deviceKeys } from './keystore.ts';
 import type { PopupState, Settings } from './messages.ts';
 import { defang, normalizeSite, reportUrl, type Mode } from './policy.ts';
 import { saveSettings } from './settings-store.ts';
@@ -159,9 +160,11 @@ function download(name: string, type: string, body: string): void {
 const stamp = () => new Date().toISOString().slice(0, 10);
 const fileLabel = () => (state.settings.deviceLabel || 'device').replace(/[^\w.-]+/g, '-').slice(0, 40);
 
-function exportJson(): void {
+async function exportJson(): Promise<void> {
   const report = buildReport(state.events, { id: state.deviceId, label: state.settings.deviceLabel }, { name: 'OwlCept extension', version: state.version }, state.settings.mode);
-  download(`owlcept-${fileLabel()}-${stamp()}.json`, 'application/json', JSON.stringify(report, null, 2));
+  // Signed with this device's key, so the fleet view can tell if the file was edited on the way.
+  const signed = await signReport(report, await deviceKeys());
+  download(`owlcept-${fileLabel()}-${stamp()}.json`, 'application/json', JSON.stringify(signed, null, 2));
 }
 
 function exportCsv(): void {
@@ -243,7 +246,7 @@ $('send-summary').addEventListener('click', () => {
   if (digits) window.open(`https://wa.me/${digits}?text=${encodeURIComponent(summaryText())}`, '_blank', 'noopener');
 });
 $('copy-summary').addEventListener('click', () => void navigator.clipboard.writeText(summaryText()));
-$('export-json').addEventListener('click', exportJson);
+$('export-json').addEventListener('click', () => void exportJson());
 $('export-csv').addEventListener('click', exportCsv);
 $('clear').addEventListener('click', () => ($('clear-confirm').hidden = false));
 $('clear-no').addEventListener('click', () => ($('clear-confirm').hidden = true));
@@ -268,6 +271,8 @@ $('trust-form').addEventListener('submit', (e) => {
 });
 chrome.storage.onChanged.addListener((changes) => {
   if (changes.events || changes.settings) void load();
+void deviceKeyId().then((id) => ($('key-id').textContent = id.replace(/(.{4})(?!$)/g, '$1 ')));
 });
 
 void load();
+void deviceKeyId().then((id) => ($('key-id').textContent = id.replace(/(.{4})(?!$)/g, '$1 ')));

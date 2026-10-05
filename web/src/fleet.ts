@@ -2,7 +2,7 @@
 // the browser. Imported files are untrusted (parseReport keeps only known
 // fields), and everything is rendered with textContent.
 
-import { buildPolicy, parseReport, reasonLabel, summarizeFleet, type ActivityEvent, type ActivityReport, type PolicyFormat } from '@owlcept/engine';
+import { buildPolicy, generateDeviceKey, parseReport, reasonLabel, signReport, summarizeFleet, verifyReport, type ActivityEvent, type ActivityReport, type PolicyFormat } from '@owlcept/engine';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLElementTagNameMap[K]> = {}, ...kids: (Node | string)[]) => {
@@ -14,6 +14,8 @@ const defang = (s: string) => s.replace(/\./g, '[.]');
 const when = (t: number | null) => (t ? new Date(t).toLocaleString() : '—');
 
 let reports: ActivityReport[] = [];
+/** Per device: whether every file was signed, and the key ids seen (more than one means the key changed). */
+const trust = new Map<string, { unsigned: boolean; keys: Set<string> }>();
 let days = 30;
 /** Lure sites ticked for the policy; survives re-renders. */
 const selected = new Set<string>();
@@ -26,15 +28,33 @@ async function addFiles(files: FileList | File[]): Promise<void> {
       note(`${f.name}: larger than 20 MB, skipped`, true);
       continue;
     }
-    try {
-      const r = parseReport(await f.text());
-      reports.push(r);
-      note(`${f.name}: ${r.device.label || r.device.id.slice(0, 8)}, ${r.events.length} events`, false);
-    } catch (e) {
-      note(`${f.name}: ${(e as Error).message}`, true);
-    }
+    await addText(f.name, await f.text());
   }
   render();
+}
+
+/** Verifies, then adds one export. Files edited after signing are left out of every number. */
+async function addText(name: string, text: string): Promise<void> {
+  let r: ActivityReport;
+  try {
+    r = parseReport(text);
+  } catch (e) {
+    note(`${name}: ${(e as Error).message}`, true);
+    return;
+  }
+  const v = await verifyReport(text);
+  const who = r.device.label || r.device.id.slice(0, 8);
+  if (v.status === 'invalid') {
+    note(`${name}: ${who}: signature check failed (${v.reason}). Left out.`, true);
+    return;
+  }
+  const t = trust.get(r.device.id) ?? { unsigned: false, keys: new Set<string>() };
+  if (v.status === 'unsigned') t.unsigned = true;
+  else t.keys.add(v.keyId!);
+  trust.set(r.device.id, t);
+  reports.push(r);
+  const sig = v.status === 'verified' ? `signed, key ${v.keyId!.slice(0, 8)}${t.keys.size > 1 ? ' (KEY CHANGED for this device)' : ''}` : 'not signed';
+  note(`${name}: ${who}, ${r.events.length} events, ${sig}`, t.keys.size > 1);
 }
 
 function note(text: string, err: boolean): void {
@@ -92,6 +112,7 @@ function render(): void {
         el('td', { className: `num ${d.overrides ? 'overr' : ''}`, textContent: String(d.overrides) }),
         el('td', { textContent: when(d.lastEvent) }),
         el('td', { textContent: d.exported ? new Date(d.exported).toLocaleDateString() : '—' }),
+        signatureCell(d.id),
       ),
     ),
   );
@@ -138,6 +159,14 @@ function renderPolicy(): void {
   $<HTMLButtonElement>('policy-download').disabled = empty;
   $<HTMLButtonElement>('policy-copy').disabled = empty;
   $('policy-note').textContent = p.rejected.length ? `Left out ${p.rejected.length} value${p.rejected.length === 1 ? '' : 's'} that ${p.rejected.length === 1 ? 'is' : 'are'} not a valid host name or fingerprint.` : '';
+}
+
+function signatureCell(deviceId: string): HTMLTableCellElement {
+  const t = trust.get(deviceId);
+  const keys = [...(t?.keys ?? [])];
+  if (keys.length > 1) return el('td', { className: 'sig bad', textContent: `key changed (${keys.map((k) => k.slice(0, 8)).join(' → ')})` });
+  if (!t || t.unsigned || !keys.length) return el('td', { className: 'sig none', textContent: 'not signed' });
+  return el('td', { className: 'sig ok', textContent: `✓ ${keys[0].slice(0, 4)} ${keys[0].slice(4, 8)}`, title: `Device key ${keys[0]}` });
 }
 
 function chart(byDay: { day: string; blocked: number; warned: number }[]): void {
@@ -194,14 +223,17 @@ $<HTMLInputElement>('file').addEventListener('change', (e) => {
   const input = e.target as HTMLInputElement;
   if (input.files) void addFiles(input.files).then(() => (input.value = ''));
 });
-$('sample').addEventListener('click', () => {
-  reports.push(...sampleReports());
-  note('Sample data: three fictional devices', false);
+$('sample').addEventListener('click', async () => {
+  // Two of the three sample devices sign their exports, like the extension does.
+  const [a, b, c] = sampleReports();
+  for (const [i, r] of [a, b].entries()) await addText(`sample-${i + 1}.json`, JSON.stringify(await signReport(r, await generateDeviceKey())));
+  await addText('sample-3.json', JSON.stringify(c));
   render();
 });
 $('reset').addEventListener('click', () => {
   reports = [];
   selected.clear();
+  trust.clear();
   $('files').replaceChildren();
   render();
 });
