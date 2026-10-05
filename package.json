@@ -16,7 +16,8 @@
     "logo": "node scripts/logo.mjs --render",
     "bench": "node bench/run.ts",
     "owlcept": "node packages/engine/cli/owlcept.ts",
-    "stress": "node bench/stress.ts"
+    "stress": "node bench/stress.ts",
+    "review-pack": "node bench/review-pack.ts"
   },
   "devDependencies": {
     "playwright": "^1.63.0"

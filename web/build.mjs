@@ -7,7 +7,7 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 cpSync(new URL('./static/', import.meta.url).pathname, out, { recursive: true });
 await build({
-  entryPoints: { app: 'src/main.ts', fleet: 'src/fleet.ts' },
+  entryPoints: { app: 'src/main.ts', fleet: 'src/fleet.ts', review: 'src/review.ts' },
   outdir: out,
   bundle: true,
   format: 'iife',

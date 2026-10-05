@@ -5,7 +5,7 @@ import { chromium } from 'playwright';
 import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { buildReport, generateDeviceKey, signReport } from '../packages/engine/src/index.ts';
+import { analyze, buildReport, explain, generateDeviceKey, parseReviewResult, reviewStats, signReport } from '../packages/engine/src/index.ts';
 
 const dist = new URL('../web/dist/', import.meta.url).pathname;
 const shots = process.argv.includes('--shots') ? new URL('../docs/assets/', import.meta.url).pathname : null;
@@ -103,6 +103,67 @@ check('a file that is not an export is rejected with a reason', (await page.text
 check('device labels render as text, not HTML', (await page.locator('#devices img').count()) === 0 && (await page.textContent('#devices')).includes('<img src=x'));
 check('no console or CSP errors', problems.length === 0, problems.join(' | '));
 check('no request leaves the page', outside.length === 0, outside.join(' '));
+
+// Warning review: two reviewers score the same pack; Results must match the engine's statistics.
+const REVIEW_CMDS = [
+  'schtasks /create /tn NightlyBackup /tr C:\\Scripts\\backup.bat /sc daily',
+  'sc create NightlyBackup binPath= C:\\Scripts\\backup.exe start= auto',
+  'reg add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /v Backup /t REG_SZ /d C:\\Scripts\\backup.bat',
+  'curl -fsSL https://pixi.sh/install.sh | bash',
+];
+const reviewPack = {
+  format: 'owlcept-review-pack', version: 1, id: 'pack-e2e', created: new Date().toISOString(), seed: 1, population: REVIEW_CMDS.length,
+  items: REVIEW_CMDS.map((cmd, i) => {
+    const v = analyze(cmd, { target: 'terminal' });
+    return { id: `w0${i + 1}`, sampleId: `s${i}`, group: 'e2e', command: cmd, target: 'terminal', source: 'typed by hand', action: v.action, risk: v.risk, findings: v.findings.map((f) => f.id),
+      warning: Object.fromEntries(['en', 'hi', 'kn'].map((l) => [l, (({ headline, details, provenance, advice }) => ({ headline, details, provenance, advice }))(explain(v, null, l))])) };
+  }),
+};
+check('review: every pack command really warns', reviewPack.items.every((i) => i.action !== 'allow'), reviewPack.items.map((i) => i.action).join(','));
+writeFileSync(join(dir, 'pack.json'), JSON.stringify(reviewPack));
+const review = await browser.newPage({ viewport: { width: 900, height: 1000 } });
+review.on('pageerror', (e) => problems.push(e.message));
+await review.route('https://owlcept.test/**', (route) => {
+  const path = new URL(route.request().url()).pathname;
+  try {
+    route.fulfill({ body: readFileSync(dist + path.slice(1)), contentType: types[extname(path)] ?? 'application/octet-stream' });
+  } catch {
+    route.fulfill({ status: 404, body: '' });
+  }
+});
+await review.goto('https://owlcept.test/review.html');
+const scoreAs = async (name, lang, keys, note) => {
+  await review.fill('#reviewer', name);
+  await review.selectOption('#lang', lang);
+  await review.setInputFiles('#pack-file', join(dir, 'pack.json'));
+  await review.waitForSelector('#item:not([hidden])');
+  await review.click('#prev').catch(() => {});
+  for (let i = 0; i < 4; i++) await review.click('#prev').catch(() => {});
+  if (note) await review.fill('#note', note);
+  for (const k of keys) {
+    await review.click('body', { position: { x: 5, y: 5 } });
+    await review.keyboard.press(k);
+  }
+  const [dl] = await Promise.all([review.waitForEvent('download'), review.click('#download')]);
+  const out = join(dir, `${name}.json`);
+  writeFileSync(out, readFileSync(await dl.path()));
+  return out;
+};
+const fileA = await scoreAs('Asha', 'en', ['1', '1', '3', '1'], 'Headline is fine; first sentence should name the task.');
+check('review: warnings render in the reviewer\'s language', /[\u0900-\u097F]/.test(await (async () => { await review.selectOption('#lang', 'hi'); return review.textContent('#w-head'); })()));
+if (shots) await review.screenshot({ path: `${shots}web-review.png`, fullPage: true });
+const fileB = await scoreAs('Ravi', 'hi', ['1', '2', '3', '1']);
+const a = parseReviewResult(readFileSync(fileA, 'utf8'));
+const b = parseReviewResult(readFileSync(fileB, 'utf8'));
+check('review: keyboard scoring is saved per reviewer', Object.values(a.scores).map((x) => x.score).join() === 'correct,correct,wrong,correct' && b.lang === 'hi' && a.scores.w01.note?.startsWith('Headline'));
+await review.click('[data-tab="results"]');
+await review.setInputFiles('#results-file', [fileA, fileB, join(dir, 'pack.json')]);
+await review.waitForSelector('#stats:not([hidden])');
+const expected = reviewStats([a, b], reviewPack.items.map((i) => i.id));
+check('review: results match the engine (accuracy, kappa)', (await review.textContent('#s-mean')) === `${Math.round(expected.meanAccuracy * 1000) / 10}%` && (await review.textContent('#s-kappa')) === expected.kappa.toFixed(2),
+  `${await review.textContent('#s-mean')} κ ${await review.textContent('#s-kappa')}`);
+check('review: wrong verdicts and disagreements are listed', (await review.locator('#s-wrong tr').count()) === 2 && (await review.locator('#s-dis tr').count()) === 1);
+if (shots) await review.screenshot({ path: `${shots}web-review-results.png`, fullPage: true });
 
 await browser.close();
 const failed = results.filter((r) => !r).length;

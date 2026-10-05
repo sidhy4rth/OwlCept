@@ -5,11 +5,11 @@
 //   node bench/run.ts            exits 1 when a target is missed
 //   node bench/run.ts --no-fail  report only
 
-import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { analyze, checkOAuthPaste, explain } from '../packages/engine/src/index.ts';
-import type { CustodyRecord, Lang, Verdict } from '../packages/engine/src/types.ts';
-import { BENIGN } from './corpus/benign.ts';
+import type { Lang, Verdict } from '../packages/engine/src/types.ts';
+import { custodyOf, loadSamples } from './load.ts';
 import type { Sample } from './types.ts';
 
 const root = new URL('../', import.meta.url).pathname;
@@ -19,36 +19,7 @@ const REPEATS = 5;
 
 // ------------------------------------------------------------------ load
 
-const samples: Sample[] = [...BENIGN];
-const corpusDir = `${root}bench/corpus/`;
-const extraFiles = readdirSync(corpusDir).filter((f) => f.endsWith('.jsonl')).sort();
-for (const f of extraFiles) {
-  readFileSync(corpusDir + f, 'utf8').split('\n').forEach((line, i) => {
-    if (!line.trim()) return;
-    try {
-      samples.push(JSON.parse(line) as Sample);
-    } catch {
-      throw new Error(`${f}:${i + 1} is not valid JSON`);
-    }
-  });
-}
-
-// ------------------------------------------------------------------ evaluate
-
-function custodyOf(s: Sample): CustodyRecord | null {
-  if (s.custody !== undefined) return s.custody;
-  if (s.copy === 'typed') return null;
-  if (s.app) return { sourceKind: 'app', sourceApp: s.app, lureWords: s.lure ?? [], time: Date.now() };
-  return {
-    sourceKind: 'browser',
-    originUrl: s.origin,
-    scriptWritten: s.copy === 'button' || s.copy === 'script-hidden',
-    visibleMatch: s.copy !== 'script-hidden',
-    lureWords: s.lure ?? [],
-    fakeCaptcha: s.fakeCaptcha ?? false,
-    time: Date.now(),
-  };
-}
+const { samples, extraFiles } = loadSamples();
 
 interface Outcome {
   sample: Sample;

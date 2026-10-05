@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>OwlCept warning review</title>
+<link rel="icon" href="owl.svg" type="image/svg+xml">
+<style>
+  :root { --bg: #F7F7FB; --card: #fff; --ink: #111827; --muted: #5B6475; --line: #E3E5EE; --brand: #312E81; --chip: #F1F2F8;
+    --ok: #15803D; --ok-bg: #ECFDF3; --warn: #B45309; --warn-bg: #FFF8EB; --stop: #C81E1E; --stop-bg: #FEF1F1; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0B0F1A; --card: #121829; --ink: #E7EAF3; --muted: #9AA3B8; --line: #232B40; --brand: #A5B4FC; --chip: #0F1424;
+    --ok: #4ADE80; --ok-bg: #0E2A1A; --warn: #FBBF24; --warn-bg: #2B210A; --stop: #F87171; --stop-bg: #2E1214; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 "Segoe UI", "Nirmala UI", system-ui, -apple-system, "Noto Sans Devanagari", "Noto Sans Kannada", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 22px 16px 40px; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; } header img { width: 40px; height: 40px; }
+  header h1 { margin: 0; font-size: 21px; } header p { margin: 0; color: var(--muted); font-size: 14px; }
+  .tabs { margin-left: auto; display: flex; background: var(--chip); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+  .tabs button { border: 0; background: none; color: var(--muted); padding: 5px 14px; border-radius: 999px; font: inherit; font-size: 13.5px; cursor: pointer; }
+  .tabs button.on { background: var(--brand); color: var(--card); font-weight: 600; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin: 14px 0; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  label { font-size: 13.5px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+  input, select, textarea { font: inherit; font-size: 14px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  textarea { width: 100%; resize: vertical; }
+  button { font: inherit; font-size: 14px; border-radius: 8px; padding: 8px 14px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+  button.primary { background: var(--brand); border-color: var(--brand); color: var(--card); font-weight: 600; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .progress { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; margin: 10px 0 4px; } .progress i { display: block; height: 100%; background: var(--brand); }
+  .meta { color: var(--muted); font-size: 13px; }
+  pre { white-space: pre-wrap; word-break: break-all; background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: 13px/1.5 ui-monospace, Consolas, monospace; margin: 6px 0 10px; max-height: 200px; overflow: auto; }
+  .warning { border-radius: 12px; padding: 14px 16px; border-left: 6px solid var(--warn); background: var(--warn-bg); }
+  .warning.block { border-left-color: var(--stop); background: var(--stop-bg); }
+  .warning h3 { margin: 0 0 6px; font-size: 17px; } .warning ul { margin: 6px 0; padding-left: 20px; } .warning .adv { font-weight: 600; margin: 8px 0 0; }
+  .scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 8px; }
+  .scores button { padding: 10px; } .scores button.on.correct { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); font-weight: 700; }
+  .scores button.on.partly { background: var(--warn-bg); border-color: var(--warn); color: var(--warn); font-weight: 700; }
+  .scores button.on.wrong { background: var(--stop-bg); border-color: var(--stop); color: var(--stop); font-weight: 700; }
+  kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; } th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .big { font-size: 30px; font-weight: 700; } .pass { color: var(--ok); } .fail { color: var(--stop); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; } .card span { color: var(--muted); font-size: 13px; display: block; }
+  .err { color: var(--stop); font-size: 13.5px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="owl.svg" alt="">
+    <div><h1>Warning review</h1><p>Score OwlCept's warnings for the brief's explanation-accuracy target (90% judged correct).</p></div>
+    <nav class="tabs"><button data-tab="review" class="on">Review</button><button data-tab="results">Results</button></nav>
+  </header>
+
+  <section id="tab-review">
+    <div class="panel">
+      <div class="row">
+        <button class="primary" id="pick-pack">Open review pack</button>
+        <label>Your name<input id="reviewer" placeholder="Reviewer 1" maxlength="60"></label>
+        <label>Warning language<select id="lang"><option value="en">English</option><option value="hi">हिन्दी</option><option value="kn">ಕನ್ನಡ</option></select></label>
+      </div>
+      <input type="file" id="pack-file" accept=".json" hidden>
+      <p class="meta" id="pack-info">Create a pack with <code>npm run review-pack</code>, then open <code>bench/review/pack.json</code> here.</p>
+      <p class="err" id="pack-err" hidden></p>
+    </div>
+
+    <div class="panel" id="item" hidden>
+      <div class="row" style="justify-content:space-between"><b id="counter"></b><span class="meta" id="saved"></span></div>
+      <div class="progress"><i id="bar"></i></div>
+      <p class="meta" id="context"></p>
+      <pre id="command"></pre>
+      <div class="warning" id="warning"><h3 id="w-head"></h3><ul id="w-details"></ul><p class="meta" id="w-prov"></p><p class="adv" id="w-adv"></p></div>
+      <p class="meta" style="margin-top:12px">Is this warning correct? It should say truthfully what the command would do and where it came from, in words a non-technical person understands.</p>
+      <div class="scores">
+        <button class="correct" data-score="correct">Correct <kbd>1</kbd></button>
+        <button class="partly" data-score="partly">Partly <kbd>2</kbd></button>
+        <button class="wrong" data-score="wrong">Wrong <kbd>3</kbd></button>
+      </div>
+      <textarea id="note" rows="2" placeholder="What is wrong or unclear? (optional)"></textarea>
+      <div class="row" style="justify-content:space-between;margin-top:10px">
+        <div class="row"><button id="prev">← Previous</button><button id="next">Next →</button></div>
+        <button class="primary" id="download">Download my scores</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-results" hidden>
+    <div class="panel">
+      <div class="row"><button class="primary" id="pick-results">Open reviewers' score files</button><span class="meta">Select both reviewers' files at once (and the pack, to see the warnings).</span></div>
+      <input type="file" id="results-file" accept=".json" multiple hidden>
+      <p class="err" id="results-err" hidden></p>
+    </div>
+    <div id="stats" hidden>
+      <div class="panel cards">
+        <div class="card"><div class="big" id="s-mean"></div><span>mean accuracy (target 90%)</span></div>
+        <div class="card"><div class="big" id="s-all"></div><span>judged correct by every reviewer</span></div>
+        <div class="card"><div class="big" id="s-kappa"></div><span id="s-kappa-label">agreement (Cohen's κ)</span></div>
+        <div class="card"><div class="big" id="s-common"></div><span>warnings scored by everyone</span></div>
+      </div>
+      <div class="panel"><h3 style="margin-top:0">Reviewers</h3><table><thead><tr><th>Reviewer</th><th>Language</th><th>Scored</th><th>Correct</th><th>Accuracy</th></tr></thead><tbody id="s-reviewers"></tbody></table></div>
+      <div class="panel"><h3 style="margin-top:0">Judged wrong</h3><table><thead><tr><th>Warning</th><th>Reviewer</th><th>Note</th></tr></thead><tbody id="s-wrong"></tbody></table></div>
+      <div class="panel"><h3 style="margin-top:0">Reviewers disagreed</h3><table><thead><tr><th>Warning</th><th>Scores</th></tr></thead><tbody id="s-dis"></tbody></table></div>
+    </div>
+  </section>
+</main>
+<script src="review.js"></script>
+</body>
+</html>
