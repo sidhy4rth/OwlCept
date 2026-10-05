@@ -10,7 +10,9 @@
   ],
   "scripts": {
     "test": "npm test -w @owlcept/engine",
-    "build": "npm run build -w @owlcept/extension && npm run build -w @owlcept/web"
+    "test:browser": "node scripts/ext-e2e.mjs",
+    "build": "npm run build -w @owlcept/extension && npm run build -w @owlcept/web",
+    "logo": "node scripts/logo.mjs --render"
   },
   "devDependencies": {
     "playwright": "^1.63.0"

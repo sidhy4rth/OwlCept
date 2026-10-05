@@ -1,0 +1,35 @@
+name: Extension
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: extension-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  extension:
+    name: Extension · build + browser test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck -w @owlcept/extension
+      - run: npm run build -w @owlcept/extension
+      - run: npx playwright install --with-deps chromium
+      - name: Load the extension in Chromium and check copy, paste and popup
+        run: node scripts/ext-e2e.mjs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: owlcept-extension
+          path: extension/dist/

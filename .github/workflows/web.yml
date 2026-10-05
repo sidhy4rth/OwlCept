@@ -1,0 +1,32 @@
+name: Web checker
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web checker · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck -w @owlcept/web
+      - run: npm run build -w @owlcept/web
+      - uses: actions/upload-artifact@v7
+        with:
+          name: owlcept-web
+          path: web/dist/
