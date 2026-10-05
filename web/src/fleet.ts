@@ -2,7 +2,7 @@
 // the browser. Imported files are untrusted (parseReport keeps only known
 // fields), and everything is rendered with textContent.
 
-import { parseReport, reasonLabel, summarizeFleet, type ActivityEvent, type ActivityReport } from '@owlcept/engine';
+import { buildPolicy, parseReport, reasonLabel, summarizeFleet, type ActivityEvent, type ActivityReport, type PolicyFormat } from '@owlcept/engine';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLElementTagNameMap[K]> = {}, ...kids: (Node | string)[]) => {
@@ -15,6 +15,8 @@ const when = (t: number | null) => (t ? new Date(t).toLocaleString() : '—');
 
 let reports: ActivityReport[] = [];
 let days = 30;
+/** Lure sites ticked for the policy; survives re-renders. */
+const selected = new Set<string>();
 
 // ------------------------------------------------------------------ loading
 
@@ -97,17 +99,45 @@ function render(): void {
   const empty = (cols: number, text: string) => el('tr', {}, el('td', { colSpan: cols, className: 'muted', textContent: text }));
   $('hosts').replaceChildren(
     ...(f.lureHosts.length
-      ? f.lureHosts.slice(0, 15).map((h) => el('tr', {}, el('td', { className: 'mono', textContent: defang(h.host) }), el('td', { className: 'num', textContent: String(h.devices) }), el('td', { className: 'num', textContent: String(h.events) })))
-      : [empty(3, 'No blocked pages in this period.')]),
+      ? f.lureHosts.slice(0, 50).map((h) => {
+          const box = document.createElement('input');
+          box.type = 'checkbox';
+          box.checked = selected.has(h.host);
+          box.setAttribute('aria-label', `Block ${h.host}`);
+          box.addEventListener('change', () => {
+            if (box.checked) selected.add(h.host);
+            else selected.delete(h.host);
+            renderPolicy();
+          });
+          return el('tr', {}, el('td', {}, box), el('td', { className: 'mono', textContent: defang(h.host) }), el('td', { className: 'num', textContent: String(h.devices) }), el('td', { className: 'num', textContent: String(h.events) }));
+        })
+      : [empty(4, 'No blocked pages in this period.')]),
   );
   $('campaigns').replaceChildren(
     ...(f.campaigns.length
       ? f.campaigns.map((c) => el('tr', {}, el('td', { className: 'mono', textContent: `${c.hash.slice(0, 16)}…` }), el('td', { className: 'num', textContent: String(c.devices) }), el('td', { className: 'mono', textContent: c.hosts.map(defang).join(', ') })))
       : [empty(3, 'No item was stopped on more than one device.')]),
   );
+  renderPolicy();
   $('reasons').replaceChildren(
     ...(f.topReasons.length ? f.topReasons.map(([id, n]) => el('tr', {}, el('td', { textContent: reasonLabel(id) }), el('td', { className: 'num', textContent: String(n) }))) : [empty(2, 'Nothing in this period.')]),
   );
+}
+
+// ------------------------------------------------------------------ policy
+
+function currentPolicy() {
+  const approved = $<HTMLTextAreaElement>('approved').value.split(/\s+/).filter(Boolean);
+  return buildPolicy({ blockedHosts: [...selected], approvedCommands: approved }, $<HTMLSelectElement>('format').value as PolicyFormat);
+}
+
+function renderPolicy(): void {
+  const p = currentPolicy();
+  const empty = !selected.size && !$<HTMLTextAreaElement>('approved').value.trim();
+  $('policy-preview').textContent = empty ? 'Tick at least one lure site above.' : p.text;
+  $<HTMLButtonElement>('policy-download').disabled = empty;
+  $<HTMLButtonElement>('policy-copy').disabled = empty;
+  $('policy-note').textContent = p.rejected.length ? `Left out ${p.rejected.length} value${p.rejected.length === 1 ? '' : 's'} that ${p.rejected.length === 1 ? 'is' : 'are'} not a valid host name or fingerprint.` : '';
 }
 
 function chart(byDay: { day: string; blocked: number; warned: number }[]): void {
@@ -171,6 +201,7 @@ $('sample').addEventListener('click', () => {
 });
 $('reset').addEventListener('click', () => {
   reports = [];
+  selected.clear();
   $('files').replaceChildren();
   render();
 });
@@ -189,3 +220,17 @@ $('copy-hosts').addEventListener('click', () => {
   });
 });
 $('export-csv').addEventListener('click', exportCsv);
+$('all-hosts').addEventListener('change', (e) => {
+  const on = (e.target as HTMLInputElement).checked;
+  for (const h of summarizeFleet(reports, { days }).lureHosts) (on ? selected.add(h.host) : selected.delete(h.host));
+  render();
+});
+$('format').addEventListener('change', renderPolicy);
+$('approved').addEventListener('input', renderPolicy);
+$('policy-copy').addEventListener('click', () => void navigator.clipboard.writeText(currentPolicy().text));
+$('policy-download').addEventListener('click', () => {
+  const p = currentPolicy();
+  const url = URL.createObjectURL(new Blob([p.text], { type: 'text/plain' }));
+  el('a', { href: url, download: p.filename }).click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});

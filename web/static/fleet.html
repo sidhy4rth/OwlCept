@@ -50,6 +50,10 @@
   .tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--chip); }
   .tag.audit { color: var(--amber); } .tag.strict { color: var(--indigo); }
   footer { color: var(--muted); font-size: 13px; }
+  textarea { width: 100%; font: 12.5px ui-monospace, Consolas, monospace; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--chip); color: var(--ink); margin: 4px 0 6px; }
+  select { font: inherit; font-size: 14px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); max-width: 100%; }
+  pre.policy { background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 10px; white-space: pre-wrap; max-height: 260px; overflow: auto; margin: 10px 0 0; }
+  td input[type=checkbox], th input[type=checkbox] { width: 16px; height: 16px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -98,7 +102,7 @@
       <section class="panel">
         <h2>Lure sites</h2>
         <p class="muted">Pages where commands were blocked, by how many devices met them. Shown defanged.</p>
-        <div class="table-wrap"><table><thead><tr><th>Site</th><th class="num">Devices</th><th class="num">Times</th></tr></thead><tbody id="hosts"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th><input type="checkbox" id="all-hosts" aria-label="Select all sites"></th><th>Site</th><th class="num">Devices</th><th class="num">Times</th></tr></thead><tbody id="hosts"></tbody></table></div>
         <div class="actions" style="justify-content:flex-start"><button id="copy-hosts">Copy as a DNS blocklist</button><span id="copied" class="muted" hidden>Copied.</span></div>
       </section>
       <section class="panel">
@@ -107,6 +111,24 @@
         <div class="table-wrap"><table><thead><tr><th>Fingerprint</th><th class="num">Devices</th><th>Seen on</th></tr></thead><tbody id="campaigns"></tbody></table></div>
       </section>
     </div>
+
+    <section class="panel" id="policy">
+      <h2>Block these sites on every PC</h2>
+      <p class="muted">Tick lure sites above, then deploy the result: any command that would contact them is blocked everywhere, even ones OwlCept has never seen. Only valid host names and fingerprints are ever written, so a tampered export cannot slip anything into a file you run as administrator.</p>
+      <label class="muted" for="approved">Approved commands (optional): SHA-256 fingerprints from <code>owlcept hash "&lt;command&gt;"</code>, one per line</label>
+      <textarea id="approved" rows="2" spellcheck="false" placeholder="3f9a…"></textarea>
+      <div class="actions" style="justify-content:flex-start">
+        <select id="format" aria-label="Policy format">
+          <option value="powershell">Windows: PowerShell command (Set-OwlCeptPolicy.ps1)</option>
+          <option value="reg">Windows: .reg file (Chrome and Edge)</option>
+          <option value="json">Linux / macOS / Intune: policy JSON</option>
+        </select>
+        <button id="policy-download" class="primary">Download</button>
+        <button id="policy-copy">Copy</button>
+        <span id="policy-note" class="muted"></span>
+      </div>
+      <pre id="policy-preview" class="mono policy"></pre>
+    </section>
 
     <section class="panel">
       <h2>Why things were stopped</h2>

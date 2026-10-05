@@ -56,6 +56,20 @@ check('campaign across devices is found', (await page.locator('#campaigns tr').c
 check('audit near-misses are counted', /would have stopped 2 more/.test(await page.textContent('#audit-note')));
 if (shots) await page.screenshot({ path: `${shots}web-fleet.png`, fullPage: true });
 
+// Policy builder: tick the campaign's site, generate each format.
+await page.locator('#hosts input[type=checkbox]').first().check();
+await page.fill('#approved', `${'c'.repeat(64)}\nnot-a-fingerprint`);
+const ps = await page.textContent('#policy-preview');
+check('policy: PowerShell command names the ticked site', ps.startsWith(".\\Set-OwlCeptPolicy.ps1 -BlockedHosts 'verify-human.example-lure.test' -ApprovedCommands 'cccc"), ps.slice(0, 90));
+check('policy: an invalid fingerprint is left out and reported', /Left out 1 value/.test(await page.textContent('#policy-note')));
+await page.selectOption('#format', 'reg');
+const [regDl] = await Promise.all([page.waitForEvent('download'), page.click('#policy-download')]);
+const reg = readFileSync(await regDl.path(), 'utf8');
+check('policy: .reg download covers Chrome and Edge', reg.startsWith('Windows Registry Editor Version 5.00') && reg.includes('Google\\Chrome') && reg.includes('Microsoft\\Edge') && regDl.suggestedFilename().endsWith('.reg'));
+await page.selectOption('#format', 'json');
+check('policy: JSON is valid browser policy', JSON.parse(await page.textContent('#policy-preview'))['3rdparty'].extensions.jjkhmdbenclipofjaeeblabpmjdcibpi.blockedHosts[0] === 'verify-human.example-lure.test');
+if (shots) await page.locator('#policy').screenshot({ path: `${shots}web-fleet-policy.png` });
+
 // Real exports through the file picker, plus one file that is not an export.
 await page.click('#reset');
 const dir = mkdtempSync(join(tmpdir(), 'owlcept-fleet-'));
