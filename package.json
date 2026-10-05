@@ -1,6 +1,7 @@
 {
   "name": "owlcept",
   "private": true,
+  "type": "module",
   "description": "OwlCept stops ClickFix-style paste-and-run attacks at copy, paste and Enter.",
   "license": "MIT",
   "workspaces": [
@@ -12,7 +13,8 @@
     "test": "npm test -w @owlcept/engine",
     "test:browser": "node scripts/ext-e2e.mjs",
     "build": "npm run build -w @owlcept/extension && npm run build -w @owlcept/web",
-    "logo": "node scripts/logo.mjs --render"
+    "logo": "node scripts/logo.mjs --render",
+    "bench": "node bench/run.ts"
   },
   "devDependencies": {
     "playwright": "^1.63.0"

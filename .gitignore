@@ -4,3 +4,4 @@ dist/
 .DS_Store
 extension/dist/
 packages/engine/dist/
+bench/results/

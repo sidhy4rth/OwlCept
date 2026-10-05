@@ -39,6 +39,7 @@ const INSTALLER_HOSTS = [
   'get.volta.sh',
   'claude.ai',
   'opencode.ai',
+  'code-server.dev',
   'pyenv.run',
   'get.rvm.io',
   'sh.vector.dev',

@@ -27,7 +27,7 @@ const RULES: Rule[] = [
     id: 'remote-script-host',
     weight: 60,
     severity: 'critical',
-    test: /\bmshta(?:\.exe)?\s+["']?(?:https?:|\\\\|javascript:|vbscript:)|\bregsvr32\b[^\n]*\/i:\s*["']?(?:https?:|\\\\)|\bregsvr32\b[^\n]*scrobj|\brundll32\b[^\n]*(?:javascript:|url\.dll|shell32\.dll\s*,\s*shellexec_rundll)|\bmsiexec\b[^\n]*\/(?:i|package)\s*["']?(?:https?:|\\\\)|\bwmic\b[^\n]*\/format:\s*["']?(?:https?:|\\\\)|\bcmstp\b[^\n]*\/s/i,
+    test: /\bmshta(?:\.exe)?\s+["']?(?:https?:|\\\\|javascript:|vbscript:)|\bregsvr32\b[^\n]*\/i:\s*["']?(?:https?:|\\\\)|\bregsvr32\b[^\n]*scrobj|\brundll32\b[^\n]*(?:javascript:|url\.dll|shell32\.dll\s*,\s*shellexec_rundll)|\bwmic\b[^\n]*\/format:\s*["']?(?:https?:|\\\\)|\bcmstp\b[^\n]*\/s/i,
   },
   { id: 'mshta-local', weight: 35, severity: 'high', test: /\bmshta(?:\.exe)?\s+["']?(?!https?:|\\\\)[^\s"']+\.hta\b/i },
   { id: 'certutil-decode', weight: 35, severity: 'high', test: /\bcertutil(?:\.exe)?\b[^\n]*(?:-decode|-decodehex|-urlcache)/i },
@@ -42,7 +42,7 @@ const RULES: Rule[] = [
     id: 'persistence',
     weight: 35,
     severity: 'high',
-    test: /\bschtasks(?:\.exe)?\s+\/create\b|register-scheduledtask|new-scheduledtask|currentversion\\run(?:once)?\b|start menu\\programs\\startup|shell:startup|\bnew-service\b|\bsc(?:\.exe)?\s+create\b|__eventfilter|launchagents|launchdaemons|crontab\s+-|loginitems/i,
+    test: /\bschtasks(?:\.exe)?\s+\/create\b|register-scheduledtask|new-scheduledtask|currentversion\\run(?:once)?\b|start menu\\programs\\startup\\\S|\bnew-service\b|\bsc(?:\.exe)?\s+create\b|__eventfilter|launchagents|launchdaemons|\|\s*crontab\b|crontab\s+-(?![a-z])|loginitems/i,
   },
   {
     id: 'defense-evasion',
@@ -74,6 +74,12 @@ const RULES: Rule[] = [
     test: /(?:login data|local state|\\cookies\b|key4\.db|logins\.json|wallet\.dat|\\exodus\\|metamask|\\electrum\\)/i,
   },
 ];
+
+// Remote MSI installs: dangerous from an unknown host, routine from an official installer host.
+const REMOTE_MSI = /\bmsiexec(?:\.exe)?\b[^\n]*\/(?:i|package)\s*["']?(?:https?:|\\\\)/i;
+
+// Opening a network folder is not a download; fetching a program or a WebDAV path is.
+const UNC_FETCH = /@ssl|davwwwroot|\.(?:exe|scr|ps1|hta|vbs|vbe|js|jse|wsf|sct|bat|cmd|msi|dll|lnk|cpl)\b/i;
 
 const TRICK_WEIGHT: Record<Trick, number> = {
   'invisible-chars': 20,
@@ -112,7 +118,7 @@ export function runRules(decoded: Decoded): RuleResult {
   };
 
   const hosts = extractHosts(all);
-  const downloads = DOWNLOAD.test(all) || hosts.some((h) => h.scheme === 'unc');
+  const downloads = DOWNLOAD.test(all) || hosts.some((h) => h.scheme === 'unc' && UNC_FETCH.test(h.url));
   const executes = EXECUTE.test(all);
   const downloadExec = downloads && executes;
   const nonInstaller = hosts.filter((h) => !isInstallerHost(h));
@@ -130,6 +136,12 @@ export function runRules(decoded: Decoded): RuleResult {
 
   if (HIDDEN.test(all)) add('hidden-window', 'behaviour', 25, 'high');
   for (const r of RULES) if (r.test.test(all)) add(r.id, 'behaviour', r.weight, r.severity, shownHost ? { host: shownHost } : undefined);
+  if (REMOTE_MSI.test(all) && !(hosts.length > 0 && nonInstaller.length === 0)) {
+    add('remote-script-host', 'behaviour', 60, 'critical', shownHost ? { host: shownHost } : undefined);
+  }
+  // Clearing the quarantine flag on an app you already have is common advice; with a download or run it is the attack.
+  const quarantine = findings.find((f) => f.id === 'mac-quarantine-strip');
+  if (quarantine && !downloads && !executes) Object.assign(quarantine, { weight: 10, severity: 'low' as Severity });
 
   // Host reputation only matters when the command reaches out.
   if (downloads || executes) {
