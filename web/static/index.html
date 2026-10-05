@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="description" content="Someone asked you to paste and run a command? OwlCept shows what it really does, in plain English, Hindi or Kannada. Runs entirely in your browser.">
+<title>OwlCept Check</title>
+<link rel="icon" href="owl.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg: #F7F7FB; --card: #FFFFFF; --ink: #111827; --muted: #5B6475; --line: #E3E5EE; --brand: #312E81; --brand-2: #4338CA;
+    --field: #FFFFFF; --code-bg: #F1F2F8;
+    --ok: #15803D; --ok-bg: #ECFDF3; --warn: #B45309; --warn-bg: #FFF8EB; --stop: #C81E1E; --stop-bg: #FEF1F1;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0B0F1A; --card: #121829; --ink: #E7EAF3; --muted: #9AA3B8; --line: #232B40; --brand: #A5B4FC; --brand-2: #818CF8;
+      --field: #0F1424; --code-bg: #0F1424;
+      --ok: #4ADE80; --ok-bg: #0E2A1A; --warn: #FBBF24; --warn-bg: #2B210A; --stop: #F87171; --stop-bg: #2E1214;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0B0F1A; --card: #121829; --ink: #E7EAF3; --muted: #9AA3B8; --line: #232B40; --brand: #A5B4FC; --brand-2: #818CF8;
+    --field: #0F1424; --code-bg: #0F1424;
+    --ok: #4ADE80; --ok-bg: #0E2A1A; --warn: #FBBF24; --warn-bg: #2B210A; --stop: #F87171; --stop-bg: #2E1214;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 "Segoe UI", "Nirmala UI", system-ui, -apple-system, "Noto Sans", "Noto Sans Devanagari", "Noto Sans Kannada", sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  header img { width: 44px; height: 44px; }
+  header h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  .langs { margin-left: auto; display: flex; gap: 4px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+  .langs button { border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; padding: 4px 12px; border-radius: 999px; cursor: pointer; }
+  .langs button[aria-pressed="true"] { background: var(--brand); color: var(--card); }
+  .tagline { color: var(--muted); margin: 10px 0 18px; font-size: 17px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  label.big { display: block; font-weight: 600; margin-bottom: 8px; }
+  textarea { width: 100%; min-height: 120px; resize: vertical; font: 14px/1.5 ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--field); color: var(--ink); }
+  textarea:focus, select:focus, button:focus-visible, input:focus-visible { outline: 2px solid var(--brand-2); outline-offset: 1px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .row label { font-size: 14px; color: var(--muted); }
+  select { font: inherit; font-size: 14px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--field); color: var(--ink); max-width: 100%; }
+  .lure { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; font-size: 14px; color: var(--ink); }
+  .lure input { margin-top: 4px; width: 18px; height: 18px; flex: none; }
+  .examples { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; font-size: 14px; color: var(--muted); }
+  .examples button { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--field); color: var(--ink); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+  #result { margin-top: 16px; }
+  .verdict { border-radius: 14px; padding: 16px 18px; border: 1px solid var(--line); background: var(--card); }
+  .verdict.allow { border-left: 6px solid var(--ok); background: var(--ok-bg); }
+  .verdict.warn { border-left: 6px solid var(--warn); background: var(--warn-bg); }
+  .verdict.block { border-left: 6px solid var(--stop); background: var(--stop-bg); }
+  .verdict.empty { color: var(--muted); text-align: center; }
+  .verdict h2 { margin: 0 0 6px; font-size: 19px; line-height: 1.35; }
+  .allow h2 { color: var(--ok); } .warn h2 { color: var(--warn); } .block h2 { color: var(--stop); }
+  .verdict ul { margin: 8px 0; padding-left: 20px; } .verdict li { margin: 4px 0; }
+  .advice { font-weight: 600; margin: 10px 0 0; }
+  .meter { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .meter .bar { flex: 1; height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .meter .fill { height: 100%; border-radius: 999px; background: var(--ok); }
+  .warn .meter .fill { background: var(--warn); } .block .meter .fill { background: var(--stop); }
+  details { margin-top: 12px; }
+  summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+  pre { white-space: pre-wrap; word-break: break-all; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; margin: 8px 0 0; max-height: 240px; overflow: auto; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { font: 13px ui-monospace, Menlo, Consolas, monospace; background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
+  footer { margin-top: 22px; color: var(--muted); font-size: 13.5px; display: flex; gap: 8px; align-items: flex-start; }
+  footer svg { flex: none; margin-top: 2px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="owl.svg" alt="">
+    <h1 data-t="title">OwlCept Check</h1>
+    <div class="langs" role="group" aria-label="Language">
+      <button type="button" data-lang="en" aria-pressed="true">English</button>
+      <button type="button" data-lang="hi" aria-pressed="false" lang="hi">हिन्दी</button>
+      <button type="button" data-lang="kn" aria-pressed="false" lang="kn">ಕನ್ನಡ</button>
+    </div>
+  </header>
+  <p class="tagline" data-t="tagline"></p>
+
+  <section class="card">
+    <label class="big" for="text" data-t="label"></label>
+    <textarea id="text" spellcheck="false" autocomplete="off" autocapitalize="off" data-t-placeholder="placeholder"></textarea>
+    <div class="row">
+      <label for="target" data-t="where"></label>
+      <select id="target">
+        <option value="unknown" data-t="t_unknown"></option>
+        <option value="run" data-t="t_run"></option>
+        <option value="terminal" data-t="t_terminal"></option>
+        <option value="explorer" data-t="t_explorer"></option>
+      </select>
+    </div>
+    <label class="lure"><input type="checkbox" id="lure"><span data-t="lure"></span></label>
+    <div class="examples"><span data-t="examples"></span>
+      <button type="button" data-example="installer" data-t="ex_installer"></button>
+      <button type="button" data-example="suspicious" data-t="ex_suspicious"></button>
+      <button type="button" data-example="signin" data-t="ex_signin"></button>
+    </div>
+  </section>
+
+  <section id="result" aria-live="polite"></section>
+
+  <footer>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+    <span data-t="privacy"></span>
+  </footer>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

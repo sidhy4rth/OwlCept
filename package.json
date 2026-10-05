@@ -5,11 +5,12 @@
   "license": "MIT",
   "workspaces": [
     "packages/*",
-    "extension"
+    "extension",
+    "web"
   ],
   "scripts": {
     "test": "npm test -w @owlcept/engine",
-    "build": "npm run build -w @owlcept/extension"
+    "build": "npm run build -w @owlcept/extension && npm run build -w @owlcept/web"
   },
   "devDependencies": {
     "playwright": "^1.63.0"
