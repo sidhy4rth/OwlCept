@@ -47,8 +47,13 @@ const context = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir()
 });
 await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 // Only web traffic: the extension's own chrome-extension:// files must load untouched.
+// Every web request in the run is recorded: the privacy check at the end allows only
+// GETs of the fixture pages above, with no body.
+const traffic = [];
 await context.route(/^https?:\/\//, (route) => {
-  const html = PAGES[route.request().url()];
+  const req = route.request();
+  traffic.push({ url: req.url(), method: req.method(), body: req.postDataBuffer()?.length ?? 0 });
+  const html = PAGES[req.url()];
   return html ? route.fulfill({ contentType: 'text/html', body: html }) : route.abort();
 });
 
@@ -182,6 +187,13 @@ check('adding a trusted site from the dashboard normalises it', (await dash.text
 await dash.click('#trusted button');
 await dash.waitForTimeout(300);
 if (shots) await dash.screenshot({ path: `${shots}ext-dashboard.png`, fullPage: true });
+
+// 7. Privacy: nothing left the device during the whole run.
+const swFetches = await worker.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((u) => /^https?:/.test(u)));
+const offFixture = traffic.filter((t) => !PAGES[t.url] || t.method !== 'GET' || t.body > 0);
+check('privacy: 0 bytes sent — only fixture pages were fetched, none with a body',
+  offFixture.length === 0 && swFetches.length === 0 && traffic.length > 0,
+  `${traffic.length} page requests, ${offFixture.length} unexpected, ${swFetches.length} from the extension worker`);
 
 await context.close();
 const failed = results.filter((r) => !r).length;
