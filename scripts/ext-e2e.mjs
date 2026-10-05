@@ -186,7 +186,7 @@ await dash.waitForTimeout(400);
 check('adding a trusted site from the dashboard normalises it', (await dash.textContent('#trusted')).includes('docs.example.test'));
 await dash.click('#trusted button');
 await dash.waitForTimeout(300);
-if (shots) await dash.screenshot({ path: `${shots}ext-dashboard.png`, fullPage: true });
+if (shots) { await dash.evaluate(() => scrollTo(0, 0)); await dash.screenshot({ path: `${shots}ext-dashboard.png`, clip: { x: 0, y: 0, width: 1180, height: 1160 } }); }
 
 // 7. Privacy: nothing left the device during the whole run.
 const swFetches = await worker.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((u) => /^https?:/.test(u)));

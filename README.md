@@ -11,6 +11,8 @@
 [![Extension](https://github.com/sidhy4rth/OwlCept/actions/workflows/extension.yml/badge.svg)](https://github.com/sidhy4rth/OwlCept/actions/workflows/extension.yml)
 [![Web checker](https://github.com/sidhy4rth/OwlCept/actions/workflows/web.yml/badge.svg)](https://github.com/sidhy4rth/OwlCept/actions/workflows/web.yml)
 [![Android](https://github.com/sidhy4rth/OwlCept/actions/workflows/android.yml/badge.svg)](https://github.com/sidhy4rth/OwlCept/actions/workflows/android.yml)
+[![Benchmark](https://github.com/sidhy4rth/OwlCept/actions/workflows/benchmark.yml/badge.svg)](docs/BENCHMARK.md)
+[![Deployment kit](https://github.com/sidhy4rth/OwlCept/actions/workflows/deploy-kit.yml/badge.svg)](docs/DEPLOY.md)
 [![CodeQL](https://github.com/sidhy4rth/OwlCept/actions/workflows/codeql.yml/badge.svg)](https://github.com/sidhy4rth/OwlCept/actions/workflows/codeql.yml)
 [![Release](https://img.shields.io/github/v/release/sidhy4rth/OwlCept?label=release&color=312E81)](https://github.com/sidhy4rth/OwlCept/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-F59E0B)](LICENSE)
@@ -28,11 +30,15 @@
 ![Zero runtime dependencies](https://img.shields.io/badge/engine-zero_dependencies-0F172A)
 ![Offline](https://img.shields.io/badge/clipboard_text-never_leaves_the_device-15803D)
 ![Languages](https://img.shields.io/badge/warnings-English_·_Hindi_·_Kannada-B91C1C)
+![False prompts](https://img.shields.io/badge/false_prompts-0_of_650_documented_commands-15803D)
+![Latency](https://img.shields.io/badge/engine_p95-0.01_ms-0F172A)
 
 [**Download**](https://github.com/sidhy4rth/OwlCept/releases/latest) ·
 [**How it works**](#how-it-works) ·
-[**Tech stack**](#tech-stack) ·
-[**Engine API**](packages/engine/README.md)
+[**Benchmark**](docs/BENCHMARK.md) ·
+[**Threat model**](docs/THREAT-MODEL.md) ·
+[**Deploy in a college**](docs/DEPLOY.md) ·
+[**Tech stack**](#tech-stack)
 
 </div>
 
@@ -51,11 +57,11 @@
 <tr>
 <td align="center"><h3>3</h3>checkpoints<br><sub>copy · paste · Enter</sub></td>
 <td align="center"><h3>14</h3>de-obfuscation<br>layers peeled</td>
-<td align="center"><h3>45</h3>named signals<br><sub>behaviour, disguise<br>and provenance</sub></td>
+<td align="center"><h3>48</h3>named signals<br><sub>behaviour, disguise,<br>provenance, source</sub></td>
 <td align="center"><h3>3</h3>warning languages<br><sub>English · Hindi · Kannada</sub></td>
-<td align="center"><h3>4</h3>ways in<br><sub>extension · web · Android<br>· Windows agent</sub></td>
+<td align="center"><h3>0 / 650</h3>false prompts<br><sub>on commands from<br>official docs</sub></td>
 <td align="center"><h3>0</h3>bytes of clipboard<br>sent anywhere</td>
-<td align="center"><h3>101</h3>tests<br><sub>94 engine + 7 in a<br>real browser</sub></td>
+<td align="center"><h3>159</h3>tests<br><sub>131 unit + 28 in a<br>real browser</sub></td>
 </tr>
 </table>
 
@@ -82,6 +88,12 @@ in their own language, what the page tried to make them do.
 | **Blocks ConsentFix** | An OAuth code or sign-in redirect pasted into a site other than the one it was issued for is stopped at paste time. |
 | **Explains it plainly** | "Stopped: this website tried to make you run a hidden command", with what it would do, where it came from and what to do now, in English, Hindi or Kannada. |
 | **Ask someone I trust** | One tap sends the warning to a saved WhatsApp contact: a child, a colleague, the college IT desk. |
+| **Knows where it came from** | A copy from WhatsApp Web, Teams, Gmail, Outlook, a PDF or a ChatGPT/Claude/Gemini answer is named in the warning ("It came from a chat message in WhatsApp Web…"), on the web and, through the agent, on the desktop. A source alone never prompts. |
+| **Three protection modes** | **Smart** blocks attacks and warns on doubtful commands. **Strict** (family PCs) blocks anything doubtful. **Audit** (IT pilots) logs without ever interrupting. |
+| **Trusted sites that cannot be abused** | Trusting a site skips its *warnings*, never its *blocks*: real sites get hacked to serve fake CAPTCHAs (700+ in the May 2026 Ghost CMS campaign). |
+| **Activity dashboard** | What was stopped, where and why, a 30-day chart, the same command stopped on several pages, searchable history, CSV and JSON export, and a weekly WhatsApp summary for a trusted person. |
+| **Opt-in lure reporting** | "Report this page" opens Google Safe Browsing's public report form with the lure URL filled in, and only when clicked. |
+| **Runs a whole lab** | Colleges set and lock every setting by Group Policy or Intune ([deploy guide](docs/DEPLOY.md)), then drop every PC's export into the **fleet view** to see campaigns across devices. No server. |
 | **Keeps nothing readable** | Only a SHA-256 fingerprint of each copy is kept, for 24 hours. The web checker's Content-Security-Policy forbids every network connection. |
 
 <table>
@@ -94,6 +106,9 @@ in their own language, what the page tried to make them do.
 <td><sub>The popup: what was stopped, warning language, and the trusted contact.</sub></td>
 </tr>
 </table>
+
+<p align="center"><img src="docs/assets/ext-dashboard.png" alt="The OwlCept activity dashboard: counts, a per-day chart, top sources and reasons, repeated items and history" width="100%"></p>
+<p align="center"><sub>The activity dashboard, also the extension's options page. Lure URLs are shown defanged; <i>Report</i> opens the public Safe Browsing form.</sub></p>
 
 ---
 
@@ -126,7 +141,7 @@ flowchart LR
 
 ---
 
-## One engine, four ways in
+## One engine, every way in
 
 | Part | What it is | Status |
 |---|---|---|
@@ -134,6 +149,10 @@ flowchart LR
 | [`extension`](extension) | Edge and Chrome extension (Manifest V3): copy checkpoint, ConsentFix paste guard, warning banner, popup, native-messaging bridge to the agent. | ✅ tested in Chromium on every push |
 | [`web`](web) | **OwlCept Check**: paste a command, see what it really does. Static, works from `file://`, CSP blocks every connection. | ✅ builds on every push |
 | [`android`](android) | Kotlin app wrapping OwlCept Check offline: share target, "Check with OwlCept" on selected text, clipboard button, Quick Settings tile. **Zero permissions.** | ✅ APK on every release |
+| [`web/fleet.html`](web/README.md#fleet-view) | **Fleet view**: drop in every PC's export; per-device counts, lure sites as a DNS blocklist, campaigns across devices, audit-mode near-misses. Offline. | ✅ tested with hostile files |
+| [`packages/engine/cli`](packages/engine/cli/owlcept.ts) | **`owlcept` CLI**: `check`, `oauth`, and a JSON-lines `serve` mode for the agent; exit status 0/1/2 for allow/warn/block. | ✅ single-file release asset |
+| [`bench`](bench) | Benchmark harness against the brief's targets. 650 commands from official docs ship with it; the team's defanged attack corpus drops in as JSONL. | ✅ [report](docs/BENCHMARK.md) in CI |
+| [`deploy`](deploy) | Policy script for Chrome and Edge, example `.reg`, Native Messaging host manifest. | ✅ tested on a Windows runner |
 | `agent` | Windows agent: clipboard listener plus paste and Enter checks for Run, Terminal and Explorer. | 🛠️ team in progress |
 
 <p align="center">
@@ -154,7 +173,11 @@ flowchart LR
 
 **Android:** install `OwlCept-android-*-debug.apk` from the same release.
 
-**Web checker:** unzip `OwlCept-check-web-*.zip` and open `index.html`. No server needed.
+**Web checker and fleet view:** unzip `OwlCept-check-web-*.zip` and open `index.html` or `fleet.html`. No server needed.
+
+**CLI:** `node OwlCept-cli-*.mjs check "irm get.scoop.sh | iex" --target terminal` (Node 18+).
+
+**A whole college or office:** see [docs/DEPLOY.md](docs/DEPLOY.md): settings by Group Policy or Intune, audit-first rollout, fleet view.
 
 ---
 
@@ -168,8 +191,10 @@ flowchart LR
 | Web checker | Vanilla TypeScript + HTML/CSS, strict Content-Security-Policy (`connect-src 'none'`), works offline |
 | Android | Kotlin 2.0, Android Gradle Plugin 8.7, SDK 35 (min 26), AndroidX WebKit `WebViewAssetLoader`, Quick Settings `TileService`, `PROCESS_TEXT` and share intents |
 | Windows agent | Team in progress; embeds the same engine through its single-file host bundle |
-| Testing | `node:test` unit tests; Playwright 1.63 loads the built extension into real Chromium |
-| CI/CD | GitHub Actions: one workflow per part, CodeQL (TypeScript + Actions), tag-triggered release that attaches the extension zip, web zip and APK |
+| Testing | `node:test` unit tests; Playwright 1.63 loads the built extension into real Chromium (modes, dashboard, export, and a network capture proving 0 bytes leave); the fleet view is tested with hostile files |
+| Benchmark | `bench/run.ts`: copy, paste and commit checkpoints per sample, false-prompt rate, latency p95, warning coverage in 3 languages; fails CI on a regression |
+| Deployment | `chrome.storage.managed` schema, PowerShell policy script for Chrome and Edge (tested on `windows-latest`), fixed extension ID via the manifest key |
+| CI/CD | GitHub Actions: one workflow per part plus Benchmark and Deployment kit, CodeQL (TypeScript + Actions), tag-triggered release that attaches the extension zip, web zip, APK and CLI |
 | Logo | Hand-written SVG with CSS keyframes (`scripts/logo.mjs`), rendered to MP4/GIF with Playwright + ffmpeg; honours `prefers-reduced-motion` |
 
 ---
@@ -191,10 +216,12 @@ does and holds the aim pose for people who prefer reduced motion. MP4 and GIF cu
 
 ```bash
 npm ci
-npm test                                   # engine unit tests
+npm test                                   # engine + extension unit tests
+npm run bench                              # benchmark → docs/BENCHMARK.md
 npm run build                              # extension → extension/dist, web → web/dist
 npx playwright install chromium
-npm run test:browser                       # loads extension/dist into Chromium, 7 checks
+npm run test:browser                       # extension (19 checks) and web pages (9) in Chromium
+npm run owlcept -- check "git status"      # the CLI from source
 cd android && ./gradlew assembleDebug      # after npm run build -w @owlcept/web; needs JDK 17
 ```
 
@@ -205,16 +232,20 @@ is ever executed.
 
 ## Privacy
 
-- Clipboard text is analysed on the device and never sent anywhere.
+Full detail, including where OwlCept can be beaten and what backs it up, is in the
+[threat model and privacy note](docs/THREAT-MODEL.md).
+
+- Clipboard text is analysed on the device and never sent anywhere. The browser test captures every request in a full run and fails on anything but its own pages.
 - The extension keeps only a SHA-256 fingerprint of each copy plus its origin, for 24 hours.
 - "Ask someone I trust" opens WhatsApp with the warning text only when the person taps it.
+- The activity log keeps hosts, finding ids and fingerprints; full URLs only for lure pages, so they can be reported.
 - The web checker and Android app make no network requests at all.
 
 ## Roadmap
 
 - Windows agent: Run box, Windows Terminal, File Explorer address bar (team in progress)
 - Native-speaker review of the Hindi and Kannada warnings
-- Benchmark harness against the brief's targets (≥ 95% detection, ≤ 1% false prompts)
+- Held-out malicious corpus (≥ 200 defanged samples) in `bench/corpus/*.jsonl` to score detection per suite
 - Edge Add-ons and Chrome Web Store listings
 
 ## License
