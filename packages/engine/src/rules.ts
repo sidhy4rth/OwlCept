@@ -27,16 +27,16 @@ const RULES: Rule[] = [
     id: 'remote-script-host',
     weight: 60,
     severity: 'critical',
-    test: /\bmshta(?:\.exe)?\s+["']?(?:https?:|\\\\|javascript:|vbscript:)|\bregsvr32\b[^\n]*\/i:\s*["']?(?:https?:|\\\\)|\bregsvr32\b[^\n]*scrobj|\brundll32\b[^\n]*(?:javascript:|url\.dll|shell32\.dll\s*,\s*shellexec_rundll)|\bwmic\b[^\n]*\/format:\s*["']?(?:https?:|\\\\)|\bcmstp\b[^\n]*\/s/i,
+    test: /\bmshta(?:\.exe)?\s+["']?(?:https?:|\\\\|javascript:|vbscript:)|\bregsvr32\b[^\n]{0,1024}\/i:\s*["']?(?:https?:|\\\\)|\bregsvr32\b[^\n]{0,1024}scrobj|\brundll32\b[^\n]{0,1024}(?:javascript:|url\.dll|shell32\.dll\s*,\s*shellexec_rundll)|\bwmic\b[^\n]{0,1024}\/format:\s*["']?(?:https?:|\\\\)|\bcmstp\b[^\n]{0,1024}\/s/i,
   },
   { id: 'mshta-local', weight: 35, severity: 'high', test: /\bmshta(?:\.exe)?\s+["']?(?!https?:|\\\\)[^\s"']+\.hta\b/i },
-  { id: 'certutil-decode', weight: 35, severity: 'high', test: /\bcertutil(?:\.exe)?\b[^\n]*(?:-decode|-decodehex|-urlcache)/i },
+  { id: 'certutil-decode', weight: 35, severity: 'high', test: /\bcertutil(?:\.exe)?\b[^\n]{0,1024}(?:-decode|-decodehex|-urlcache)/i },
   { id: 'finger-staging', weight: 50, severity: 'critical', test: /\bfinger(?:\.exe)?\s+\S+@\S+/i },
   {
     id: 'dns-staging',
     weight: 55,
     severity: 'critical',
-    test: /\bnslookup\b[^\n]*(?:-q(?:uery)?=txt|-type=txt|\|\s*(?:findstr|iex|cmd|powershell)|\bfor\s+\/f)|\bfor\s+\/f[^\n]*nslookup|resolve-dnsname\b[^\n]*-type\s+txt[^\n]*(?:iex|invoke-expression|\.strings)/i,
+    test: /\bnslookup\b[^\n]{0,1024}(?:-q(?:uery)?=txt|-type=txt|\|\s*(?:findstr|iex|cmd|powershell)|\bfor\s+\/f)|\bfor\s+\/f[^\n]{0,1024}nslookup|resolve-dnsname\b[^\n]{0,1024}-type\s+txt[^\n]{0,1024}(?:iex|invoke-expression|\.strings)/i,
   },
   {
     id: 'persistence',
@@ -48,7 +48,7 @@ const RULES: Rule[] = [
     id: 'defense-evasion',
     weight: 50,
     severity: 'critical',
-    test: /set-mppreference[^\n]*-disable|add-mppreference[^\n]*-exclusion|amsiutils|amsiinitfailed|amsiscanbuffer|disablerealtimemonitoring|\bnetsh\s+advfirewall\s+set\b[^\n]*off|spctl\s+--master-disable/i,
+    test: /set-mppreference[^\n]{0,1024}-disable|add-mppreference[^\n]{0,1024}-exclusion|amsiutils|amsiinitfailed|amsiscanbuffer|disablerealtimemonitoring|\bnetsh\s+advfirewall\s+set\b[^\n]{0,1024}off|spctl\s+--master-disable/i,
   },
   { id: 'clear-tracks', weight: 20, severity: 'medium', test: /\bclear-history\b|historysavepath|\bwevtutil(?:\.exe)?\s+cl\b|clear-eventlog|history\s+-c\b/i },
   {
@@ -63,10 +63,10 @@ const RULES: Rule[] = [
     id: 'password-prompt',
     weight: 45,
     severity: 'critical',
-    test: /osascript[^\n]*display dialog[^\n]*(?:hidden answer|password)|dscl\s+\.\s+-authonly|\bsecurity\s+(?:find-generic-password|find-internet-password|dump-keychain)/i,
+    test: /osascript[^\n]{0,1024}display dialog[^\n]{0,1024}(?:hidden answer|password)|dscl\s+\.\s+-authonly|\bsecurity\s+(?:find-generic-password|find-internet-password|dump-keychain)/i,
   },
-  { id: 'decode-to-shell', weight: 40, severity: 'high', test: /base64\s+(?:-d|-D|--decode)[^\n]*\|\s*(?:sudo\s+)?(?:sh|bash|zsh|python3?)\b|eval\s+["']?\$\(\s*echo[^\n]*base64/i },
-  { id: 'reverse-shell', weight: 50, severity: 'critical', test: /\/dev\/tcp\/|\bnc(?:at)?\b[^\n]*\s-e\s|net\.sockets\.tcpclient/i },
+  { id: 'decode-to-shell', weight: 40, severity: 'high', test: /base64\s+(?:-d|-D|--decode)[^\n]{0,1024}\|\s*(?:sudo\s+)?(?:sh|bash|zsh|python3?)\b|eval\s+["']?\$\(\s*echo[^\n]{0,1024}base64/i },
+  { id: 'reverse-shell', weight: 50, severity: 'critical', test: /\/dev\/tcp\/|\bnc(?:at)?\b[^\n]{0,1024}\s-e\s|net\.sockets\.tcpclient/i },
   {
     id: 'browser-data',
     weight: 40,
@@ -76,7 +76,7 @@ const RULES: Rule[] = [
 ];
 
 // Remote MSI installs: dangerous from an unknown host, routine from an official installer host.
-const REMOTE_MSI = /\bmsiexec(?:\.exe)?\b[^\n]*\/(?:i|package)\s*["']?(?:https?:|\\\\)/i;
+const REMOTE_MSI = /\bmsiexec(?:\.exe)?\b[^\n]{0,1024}\/(?:i|package)\s*["']?(?:https?:|\\\\)/i;
 
 // Opening a network folder is not a download; fetching a program or a WebDAV path is.
 const UNC_FETCH = /@ssl|davwwwroot|\.(?:exe|scr|ps1|hta|vbs|vbe|js|jse|wsf|sct|bat|cmd|msi|dll|lnk|cpl)\b/i;
@@ -101,7 +101,7 @@ const OBFUSCATION_CAP = 45;
 
 const DECOY_WORDS =
   /robot|captcha|human|verif|cloudflare|ray\s*id|security check|confirm|validation|authenticat|✅|✔|☑|मैं रोबोट|सत्यापन|ರೋಬೋಟ್|ಪರಿಶೀಲನೆ/i;
-const DECOY_PATH = /^[\s"']*(?:[a-z]:\\|\\\\|%\w+%\\|~\/|\/users\/)[^\n]*\.(?:docx?|xlsx?|pptx?|pdf|txt|csv|zip|png|jpe?g)\b/i;
+const DECOY_PATH = /^[\s"']*(?:[a-z]:\\|\\\\|%\w+%\\|~\/|\/users\/)[^\n]{0,1024}\.(?:docx?|xlsx?|pptx?|pdf|txt|csv|zip|png|jpe?g)\b/i;
 
 export interface RuleResult {
   findings: Finding[];

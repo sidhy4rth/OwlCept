@@ -3,7 +3,7 @@
 
 import { deobfuscate } from './deobfuscate.ts';
 import { runRules } from './rules.ts';
-import { score } from './score.ts';
+import { score, WARN_AT } from './score.ts';
 import type { AnalyzeContext, Verdict } from './types.ts';
 
 export type * from './types.ts';
@@ -24,15 +24,24 @@ export function normalizeForHash(text: string): string {
   return text.replace(/\r\n?/g, '\n').replace(/[ \t\u00A0]+/g, ' ').replace(/ *\n */g, '\n').trim();
 }
 
+/** Engine time budget; the extension's own patience is 400 ms. */
+const DEFAULT_BUDGET_MS = 150;
+
 /** Longest input analysed in full; real lures are a few hundred characters. */
 const MAX_INPUT = 64 * 1024;
 
 export function analyze(text: string, ctx: AnalyzeContext = {}): Verdict {
   const started = now();
   const input = fitInput(text);
-  const decoded = deobfuscate(input);
+  const decoded = deobfuscate(input, started + (ctx.budgetMs ?? DEFAULT_BUDGET_MS));
   const { findings, hosts } = runRules(decoded);
-  const { action, risk, context } = score(findings, hosts, ctx);
+  let { action, risk, context } = score(findings, hosts, ctx);
+  // Fail safe, not open: text that could not be fully decoded in time is at least a warning.
+  if (decoded.incomplete) {
+    context = [...context, { id: 'analysis-incomplete', kind: 'context', weight: 0, severity: 'medium' }];
+    if (action === 'allow') action = 'warn';
+    risk = Math.max(risk, WARN_AT);
+  }
   return {
     action,
     risk,

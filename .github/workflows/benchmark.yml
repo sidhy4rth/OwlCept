@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   benchmark:
-    name: Benchmark · false prompts, latency, explanations
+    name: Benchmark · false prompts, latency, worst case, explanations
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -24,6 +24,8 @@ jobs:
           node-version: 24
       - name: Run the benchmark against the brief's targets
         run: node bench/run.ts
+      - name: Worst-case timing on 1,700 pathological inputs (50 ms budget)
+        run: node bench/stress.ts
       - name: Summary
         if: always()
         run: cat docs/BENCHMARK.md >> "$GITHUB_STEP_SUMMARY"

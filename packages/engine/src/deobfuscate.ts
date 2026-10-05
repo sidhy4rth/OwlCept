@@ -24,6 +24,8 @@ export interface Decoded {
   tricks: Set<Trick>;
   /** Trailing comments that were split off ("# I am not a robot ..."). */
   comments: string[];
+  /** True when the time budget ran out with decoding work left undone. */
+  incomplete: boolean;
 }
 
 const ZERO_WIDTH = /[\u200B-\u200D\u2060\u180E\uFEFF]/g;
@@ -51,20 +53,29 @@ const ENV: Record<string, string> = {
   driverdata: 'C:\\Windows\\System32\\Drivers\\DriverData',
 };
 
-export function deobfuscate(input: string): Decoded {
-  const out: Decoded = { layers: [], tricks: new Set(), comments: [] };
+const clock = (): number => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+/** `deadline` is a clock() time; work still left when it passes is skipped and reported as incomplete. */
+export function deobfuscate(input: string, deadline = Infinity): Decoded {
+  const out: Decoded = { layers: [], tricks: new Set(), comments: [], incomplete: false };
   const seen = new Set<string>();
-  walk(input, 0, out, seen);
+  walk(input, 0, out, seen, deadline);
   return out;
 }
 
-function walk(raw: string, depth: number, out: Decoded, seen: Set<string>): void {
-  const text = simplify(normalise(raw, out.tricks), out);
+function walk(raw: string, depth: number, out: Decoded, seen: Set<string>, deadline: number): void {
+  const text = simplify(normalise(raw, out.tricks), out, deadline);
   if (seen.has(text)) return;
   seen.add(text);
   out.layers.push(text);
   if (depth >= MAX_DEPTH) return;
-  for (const inner of decodeBlobs(text, out.tricks)) walk(inner, depth + 1, out, seen);
+  for (const inner of decodeBlobs(text, out.tricks)) {
+    if (clock() > deadline) {
+      out.incomplete = true;
+      return;
+    }
+    walk(inner, depth + 1, out, seen, deadline);
+  }
 }
 
 // ---------------------------------------------------------------- normalise
@@ -81,10 +92,14 @@ function normalise(s: string, tricks: Set<Trick>): string {
 
 // ---------------------------------------------------------------- simplify
 
-function simplify(s: string, out: Decoded): string {
+function simplify(s: string, out: Decoded, deadline: number): string {
   const t = out.tricks;
   s = splitComment(s, out);
   for (let pass = 0; pass < MAX_PASSES; pass++) {
+    if (pass > 0 && clock() > deadline) {
+      out.incomplete = true;
+      break;
+    }
     const before = s;
     s = unescape(s, t);
     s = charCodes(s, t);
@@ -187,21 +202,62 @@ function envSlicing(s: string, t: Set<Trick>): string {
   return r;
 }
 
+/**
+ * End (exclusive) of the quoted literal that opens at s[i], or -1 if it does not
+ * close on the same line. Linear overall: on any line at most one ' and one "
+ * can be left open, so the scans to end-of-line are bounded.
+ */
+function literalEnd(s: string, i: number): number {
+  const q = s[i];
+  for (let k = i + 1; k < s.length; k++) {
+    if (s[k] === q) return k + 1;
+    if (s[k] === '\n') return -1;
+  }
+  return -1;
+}
+
+const isQuote = (c: string | undefined) => c === "'" || c === '"';
+
+// The tail after a literal: .Replace('a','b') or -replace 'a','b' (sticky, tried only where a literal ends).
+const REPLACE_TAIL = /\s*(?:\.replace\(\s*|-replace\s*\(?\s*)(['"])([^\n]*?)\1\s*,\s*(['"])([^\n]*?)\3\s*\)?/iy;
+
 function stringReplace(s: string, t: Set<Trick>): string {
-  const r = s.replace(
-    /(['"])((?:(?!\1).)*)\1\s*(?:\.replace\(\s*|-replace\s*\(?\s*)(['"])((?:(?!\3).)*)\3\s*,\s*(['"])((?:(?!\5).)*)\5\s*\)?/gi,
-    (_m, q: string, body: string, _q2, from: string, _q3, to: string) => {
-      if (!from) return `${q}${body}${q}`;
-      return `${q}${body.split(from).join(to)}${q}`;
-    },
-  );
-  if (r !== s) t.add('string-replace');
-  return r;
+  if (!/replace/i.test(s)) return s;
+  let out = '';
+  let i = 0;
+  let changed = false;
+  while (i < s.length) {
+    if (!isQuote(s[i])) {
+      out += s[i++];
+      continue;
+    }
+    const end = literalEnd(s, i);
+    if (end < 0) {
+      out += s[i++];
+      continue;
+    }
+    const q = s[i];
+    let body = s.slice(i + 1, end - 1);
+    let j = end;
+    // Chains like 'x'.replace('a','b').replace('c','d') apply in order.
+    for (;;) {
+      REPLACE_TAIL.lastIndex = j;
+      const m = REPLACE_TAIL.exec(s);
+      if (!m) break;
+      if (m[2]) body = body.split(m[2]).join(m[4]);
+      j = REPLACE_TAIL.lastIndex;
+      changed = true;
+    }
+    out += q + body + q;
+    i = j;
+  }
+  if (changed) t.add('string-replace');
+  return changed ? out : s;
 }
 
 function formatOperator(s: string, t: Set<Trick>): string {
   const r = s.replace(
-    /\(?\s*(['"])((?:\{\d+\}|[^'"{}])*\{\d+\}(?:\{\d+\}|[^'"{}])*)\1\s*-f\s*((?:(['"])(?:(?!\4).)*\4\s*,\s*)*(['"])(?:(?!\5).)*\5)\s*\)?/gi,
+    /(?:\(\s*)?(['"])((?:\{\d+\}|[^'"{}])*\{\d+\}(?:\{\d+\}|[^'"{}])*)\1\s*-f\s*((?:(['"])(?:(?!\4).)*\4\s*,\s*)*(['"])(?:(?!\5).)*\5)\s*\)?/gi,
     (m, q: string, fmt: string, args: string) => {
       const parts = [...args.matchAll(/(['"])((?:(?!\1).)*)\1/g)].map((a) => a[2]);
       const filled = fmt.replace(/\{(\d+)\}/g, (_x, i: string) => parts[Number(i)] ?? '');
@@ -212,16 +268,45 @@ function formatOperator(s: string, t: Set<Trick>): string {
   return r;
 }
 
+/** 'pow' + 'er' + "shell" → 'powershell', in one linear pass. */
 function foldConcat(s: string, t: Set<Trick>): string {
-  const re = /(['"])((?:(?!\1).)*)\1\s*\+\s*(['"])((?:(?!\3).)*)\3/;
-  let r = s;
+  if (!s.includes('+')) return s;
+  let out = '';
+  let i = 0;
   let folds = 0;
-  while (re.test(r) && folds < 200) {
-    r = r.replace(re, (_m, q: string, a: string, _q2: string, b: string) => `${q}${a}${b}${q}`);
-    folds++;
+  const skipSpace = (k: number) => {
+    while (k < s.length && (s[k] === ' ' || s[k] === '\t')) k++;
+    return k;
+  };
+  while (i < s.length) {
+    if (!isQuote(s[i])) {
+      out += s[i++];
+      continue;
+    }
+    const end = literalEnd(s, i);
+    if (end < 0) {
+      out += s[i++];
+      continue;
+    }
+    const q = s[i];
+    let body = s.slice(i + 1, end - 1);
+    let j = end;
+    for (;;) {
+      let k = skipSpace(j);
+      if (s[k] !== '+') break;
+      k = skipSpace(k + 1);
+      if (!isQuote(s[k])) break;
+      const e2 = literalEnd(s, k);
+      if (e2 < 0) break;
+      body += s.slice(k + 1, e2 - 1);
+      j = e2;
+      folds++;
+    }
+    out += q + body + q;
+    i = j;
   }
   if (folds >= 2) t.add('string-splitting');
-  return r;
+  return folds ? out : s;
 }
 
 /** Inlines `$x = 'literal'` (PowerShell) and `set x=literal` (cmd) so later rules see the value. */

@@ -29,6 +29,11 @@ export interface CustodyRecord {
 export interface AnalyzeContext {
   target?: PasteTarget;
   custody?: CustodyRecord | null;
+  /**
+   * Time budget in ms (default 150). The extension stops waiting at 400 ms, so an
+   * input that outlasts the budget gets at least a warning rather than nothing.
+   */
+  budgetMs?: number;
 }
 
 export type Severity = 'info' | 'low' | 'medium' | 'high' | 'critical';

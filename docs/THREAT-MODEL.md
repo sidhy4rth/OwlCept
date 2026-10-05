@@ -45,7 +45,7 @@ where it meets them.
 | Weakness | Why it exists | Backstop |
 |---|---|---|
 | A page can undo `hook.ts` (for example by borrowing a clean `Clipboard` from a fresh iframe) | Any script in the page world can | The isolated-world copy listener still records manual copies; the agent's clipboard listener sees every write; the commit check reads the command |
-| A clipboard write goes through unchanged if the verdict takes longer than 400 ms | Never breaking a site's copy button matters more than a rare slow verdict (the engine's p95 is ~0.01 ms) | Paste and commit checks |
+| A clipboard write goes through unchanged if the verdict takes longer than 400 ms | Never breaking a site's copy button matters more than a rare slow verdict | The engine has its own 150 ms budget: input it cannot finish decoding in time gets at least a **warning** (`analysis-incomplete`). `bench/stress.ts` feeds it 1,700 pathological inputs up to 200 KB in CI and fails above 50 ms; the worst is ~24 ms after three quadratic patterns were made linear. Paste and commit checks still apply |
 | Copies inside Chrome's built-in PDF viewer are not visible to content scripts | Browser limitation | The agent sees the clipboard write from the browser process |
 | A command with no risky behaviour and no lure context passes | By design: provenance alone never prompts (the two-signal rule), so developers are not interrupted | It does nothing harmful by itself; a later stage meets the same checks |
 | A brand-new technique the rules do not know | Rules are static and offline | Content-independent signals (hidden copy, lure words, fake CAPTCHA) still fire; the benchmark corpus grows with each new campaign |
