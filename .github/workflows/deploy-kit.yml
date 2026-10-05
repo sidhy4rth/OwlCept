@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v7
       - name: Write the policy
         shell: pwsh
-        run: ./deploy/windows/Set-OwlCeptPolicy.ps1 -Mode strict -Language hi -TrustedSites docs.example-college.edu.in,'bad host!',Learn.Microsoft.com -HelpDeskWhatsApp '+91 98000 00000'.Replace(' ','') -AllowCopyAnyway $false -ReportLures $true -DeviceLabel 'Lab PC 1'
+        run: ./deploy/windows/Set-OwlCeptPolicy.ps1 -Mode strict -Language hi -TrustedSites docs.example-college.edu.in,'bad host!',Learn.Microsoft.com -HelpDeskWhatsApp '+919800000000' -AllowCopyAnyway $false -ReportLures $true -DeviceLabel 'Lab PC 1'
       - name: Read it back the way the browsers will
         shell: pwsh
         run: |
