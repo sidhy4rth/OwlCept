@@ -1,0 +1,13 @@
+// Builds dist/owlcept-engine.js: one plain script for embedded JavaScript
+// engines (Jint in the Windows agent). It defines globalThis.OwlCept.
+import { build } from 'esbuild';
+
+await build({
+  entryPoints: [new URL('./host/entry.ts', import.meta.url).pathname],
+  outfile: new URL('./dist/owlcept-engine.js', import.meta.url).pathname,
+  bundle: true,
+  format: 'iife',
+  target: 'es2020',
+  legalComments: 'none',
+  logLevel: 'info',
+});
