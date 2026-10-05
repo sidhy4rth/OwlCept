@@ -1,0 +1,46 @@
+name: Deployment kit
+
+on:
+  push:
+    branches: [main]
+    paths: ['deploy/**', '.github/workflows/deploy-kit.yml']
+  pull_request:
+    paths: ['deploy/**', '.github/workflows/deploy-kit.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  policy-script:
+    name: Windows · policy script writes and removes the registry policy
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Write the policy
+        shell: pwsh
+        run: ./deploy/windows/Set-OwlCeptPolicy.ps1 -Mode strict -Language hi -TrustedSites docs.example-college.edu.in,'bad host!',Learn.Microsoft.com -HelpDeskWhatsApp '+91 98000 00000'.Replace(' ','') -AllowCopyAnyway $false -ReportLures $true -DeviceLabel 'Lab PC 1'
+      - name: Read it back the way the browsers will
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($root in 'HKLM:\SOFTWARE\Policies\Google\Chrome', 'HKLM:\SOFTWARE\Policies\Microsoft\Edge') {
+            $k = "$root\3rdparty\extensions\jjkhmdbenclipofjaeeblabpmjdcibpi\policy"
+            $p = Get-ItemProperty $k
+            if ($p.mode -ne 'strict' -or $p.lang -ne 'hi' -or $p.contact -ne '919800000000') { throw "string values wrong under $k" }
+            if ($p.allowCopyAnyway -ne 0 -or $p.reportLures -ne 1) { throw "DWORD values wrong under $k" }
+            $sites = Get-ItemProperty "$k\trustedSites"
+            if ($sites.'1' -ne 'docs.example-college.edu.in' -or $sites.'2' -ne 'learn.microsoft.com' -or $sites.'3') { throw "trustedSites list wrong under $k" }
+            Write-Output "ok: $k"
+          }
+      - name: Remove it
+        shell: pwsh
+        run: |
+          ./deploy/windows/Set-OwlCeptPolicy.ps1 -Remove
+          if (Test-Path 'HKLM:\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\jjkhmdbenclipofjaeeblabpmjdcibpi\policy') { throw 'Chrome policy still there' }
+          if (Test-Path 'HKLM:\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\jjkhmdbenclipofjaeeblabpmjdcibpi\policy') { throw 'Edge policy still there' }
+      - name: The example .reg file imports cleanly
+        shell: pwsh
+        run: |
+          reg import deploy\windows\owlcept-policy-example.reg
+          if ((Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\jjkhmdbenclipofjaeeblabpmjdcibpi\policy').mode -ne 'smart') { throw 'import failed' }

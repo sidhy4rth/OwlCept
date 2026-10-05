@@ -1,0 +1,7 @@
+{
+  "name": "com.owlcept.agent",
+  "description": "OwlCept Windows agent: receives custody records (hash + metadata) from the browser extension",
+  "path": "C:\\Program Files\\OwlCept\\owlcept-agent.exe",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://jjkhmdbenclipofjaeeblabpmjdcibpi/"]
+}

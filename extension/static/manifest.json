@@ -3,6 +3,7 @@
   "name": "OwlCept",
   "short_name": "OwlCept",
   "version": "0.1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA6o6UaSOVBrg1h5b75b94j73LCKshNUZxNHwif2Lbb7LTys1Ktry14gnD2G3pC9HRyr+gEdnIK7KTf4MyGi/UQfHIaujtjaK4iBQs5558RE0GtlWy0tvpamdUy/f8y3kdpkPvdTiZACKu3BVWTuABuBHyGQsYOZMbF3eP2jnVavtJSbHCDY2/hjovT2V2lyzUaWE/ixIPJ9tMuR4eWRtxuvUAvnwFQkF1KozkFbNkBDddn7EIQkXmQKuVsmQAtx/dSBSc9iDbc1JrF44UFME1Wx1tElVj4fFY/Xw9ryD6YZXrHEePIbHdmjTam05qz/fuSoZuBozWFee+dxvdtt10bwIDAQAB",
   "description": "Stops fake-CAPTCHA \"paste and run\" (ClickFix) attacks and explains them in plain language. Clipboard text never leaves your device.",
   "minimum_chrome_version": "111",
   "permissions": [
