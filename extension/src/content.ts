@@ -9,6 +9,7 @@ import { DEFAULT_SETTINGS, type Settings, type StatusReply, type ToBackground, t
 import { readLureContext } from './page-context.ts';
 import { UI, fill, resolveLang } from './strings.ts';
 import { checkVisibility } from './visibility.ts';
+import { decide } from './policy.ts';
 
 const TAG = '__owlcept__';
 const CLICK_RELEVANCE_MS = 5000;
@@ -90,9 +91,10 @@ async function onCopy(text: string, scripted: boolean): Promise<string | null> {
     time: Date.now(),
   };
   const verdict = analyze(text, { target: 'unknown', custody });
-  void send({ type: 'custody', record: custody, action: verdict.action, risk: verdict.risk, ids: verdict.findings.map((f) => f.id) });
-
-  if (verdict.action === 'allow') return null;
+  const ids = verdict.findings.map((f) => f.id);
+  const d = decide({ action: verdict.action, mode: settings.mode, trustedSites: settings.trustedSites, host: pageHost(), agentConnected });
+  void send({ type: 'custody', record: custody, action: d.log, risk: verdict.risk, ids, note: d.note, shown: d.show !== 'none' });
+  if (d.show === 'none') return null;
 
   const l = lang();
   const e = explain(verdict, custody, l);
@@ -104,15 +106,10 @@ async function onCopy(text: string, scripted: boolean): Promise<string | null> {
     provenance: e.provenance,
     advice: e.advice,
     host: pageHost(),
+    ids,
   };
-
-  if (verdict.action === 'block') {
-    present(data, text);
-    return fill(UI[l].blockedLine, { host: pageHost() || 'this page' });
-  }
-  // Warnings at copy time are only shown when no agent will check the paste itself.
-  if (!agentConnected) present(data, null);
-  return null;
+  present(data, d.replaceClipboard ? text : null, d.show);
+  return d.replaceClipboard ? fill(UI[l].blockedLine, { host: pageHost() || 'this page' }) : null;
 }
 
 // ------------------------------------------------------------ checkpoint 1b: ConsentFix
@@ -121,12 +118,15 @@ function guardOAuthPaste(e: ClipboardEvent | DragEvent | InputEvent, text: strin
   if (!text || text.length > 20_000) return;
   const d = checkOAuthPaste(text, location.href);
   if (!d.block || !d.code) return;
+  // A sign-in code in the wrong site is always a block; only audit mode lets it through (and logs it).
+  const audit = settings.mode === 'audit';
+  void send({ type: 'consentfix', host: pageHost(), provider: d.code.provider, note: audit ? 'audit' : undefined });
+  if (audit) return;
   e.preventDefault();
   e.stopImmediatePropagation();
   const l = lang();
   const c = explainConsentFix(d.code, l);
-  void send({ type: 'consentfix', host: pageHost(), provider: d.code.provider });
-  present({ kind: 'consentfix', lang: l, headline: c.headline, details: [c.detail], advice: c.advice, host: pageHost() }, null);
+  present({ kind: 'consentfix', lang: l, headline: c.headline, details: [c.detail], advice: c.advice, host: pageHost(), ids: ['consentfix'] }, null, 'banner');
 }
 
 addEventListener('paste', (e) => guardOAuthPaste(e, e.clipboardData?.getData('text/plain')), true);
@@ -138,29 +138,35 @@ addEventListener('beforeinput', (e) => {
 // ------------------------------------------------------------ warning UI
 
 /** Shows the warning in the top frame; small iframes would hide it. */
-function present(data: BannerData, original: string | null): void {
+function present(data: BannerData, original: string | null, show: 'toast' | 'banner'): void {
   if (window !== window.top) {
-    void send({ type: 'show-banner', data, canCopyAnyway: false });
+    void send({ type: 'show-banner', data, canCopyAnyway: false, show });
     return;
   }
-  render(data, original);
+  render(data, original, show);
 }
 
-function render(data: BannerData, original: string | null): void {
+function render(data: BannerData, original: string | null, show: 'toast' | 'banner'): void {
   const actions = {
     onClose: () => void send({ type: 'close-tab' }),
     onAsk: () => {
       const digits = settings.contact.replace(/\D/g, '');
       window.open(`https://wa.me/${digits}?text=${encodeURIComponent(askMessage(data))}`, '_blank', 'noopener');
     },
-    onCopyAnyway: original === null ? undefined : () => navigator.clipboard.writeText(original).catch(() => overwriteClipboard(original)),
+    onCopyAnyway:
+      original === null
+        ? undefined
+        : async () => {
+            void send({ type: 'override', host: data.host, ids: data.ids ?? [] });
+            await navigator.clipboard.writeText(original).catch(() => overwriteClipboard(original));
+          },
   };
-  if (data.kind === 'warn') showToast(data, () => showBanner(data, actions));
+  if (show === 'toast') showToast(data, () => showBanner(data, actions));
   else showBanner(data, actions);
 }
 
 chrome.runtime.onMessage.addListener((msg: ToContent) => {
-  if (msg?.type === 'show-banner' && window === window.top) render(msg.data, null);
+  if (msg?.type === 'show-banner' && window === window.top) render(msg.data, null, msg.show);
 });
 
 addEventListener('pagehide', hideBanner);

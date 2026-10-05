@@ -96,8 +96,9 @@ chrome.runtime.onMessage.addListener((msg: ToBackground, sender, reply) => {
           host: hostOf(msg.record.originUrl),
           ids: msg.ids,
           hash: msg.record.hash,
+          note: msg.note,
         });
-        if (msg.action === 'block' && tabId !== undefined) {
+        if (msg.shown && msg.action === 'block' && tabId !== undefined) {
           void chrome.action.setBadgeBackgroundColor({ tabId, color: '#DC2626' });
           void chrome.action.setBadgeText({ tabId, text: '!' });
         }
@@ -105,12 +106,15 @@ chrome.runtime.onMessage.addListener((msg: ToBackground, sender, reply) => {
       return false;
     }
     case 'consentfix':
-      void logEvent({ time: Date.now(), kind: 'consentfix', host: msg.host, ids: ['consentfix', msg.provider] });
-      if (tabId !== undefined) void chrome.action.setBadgeText({ tabId, text: '!' });
+      void logEvent({ time: Date.now(), kind: 'consentfix', host: msg.host, ids: ['consentfix', msg.provider], note: msg.note });
+      if (!msg.note && tabId !== undefined) void chrome.action.setBadgeText({ tabId, text: '!' });
+      return false;
+    case 'override':
+      void logEvent({ time: Date.now(), kind: 'override', host: msg.host, ids: msg.ids });
       return false;
     case 'show-banner':
       if (tabId !== undefined) {
-        const out: ToContent = { type: 'show-banner', data: msg.data, canCopyAnyway: false };
+        const out: ToContent = { type: 'show-banner', data: msg.data, canCopyAnyway: false, show: msg.show };
         void chrome.tabs.sendMessage(tabId, out, { frameId: 0 });
       }
       return false;

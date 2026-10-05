@@ -24,6 +24,13 @@
   label { display: block; margin: 8px 16px 0; font-size: 13px; }
   select, input { width: 100%; margin-top: 4px; font: inherit; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
   footer { margin: 14px 16px 14px; color: var(--muted); font-size: 12px; }
+  label.check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
+  label.check input { width: auto; margin-top: 3px; }
+  #locked { margin: 8px 16px 0; font-size: 12px; color: var(--muted); }
+  li.note b { color: var(--muted); }
+  #status.audit { color: var(--muted); }
+  .links { margin: 10px 16px 0; font-size: 13px; } .links a { color: var(--brand); }
+  @media (prefers-color-scheme: dark) { .links a { color: #A5B4FC; } }
 </style>
 </head>
 <body>
@@ -38,6 +45,15 @@
   <ul id="events"></ul>
 
   <h2>Settings</h2>
+  <label>Protection
+    <select id="mode">
+      <option value="smart">Smart: block attacks, warn on doubtful commands</option>
+      <option value="strict">Strict: block anything doubtful (family PCs)</option>
+      <option value="audit">Audit: log only, never interrupt (IT pilots)</option>
+    </select>
+  </label>
+  <label class="check" id="trust-row" hidden><input type="checkbox" id="trust"> <span>Trust <b id="trust-host"></b>: skip warnings here (blocks still apply)</span></label>
+  <p id="locked" hidden>Some settings are managed by your organisation.</p>
   <label>Warning language
     <select id="lang">
       <option value="auto">Automatic</option>
@@ -49,6 +65,7 @@
   <label>Trusted person's WhatsApp number (optional)
     <input id="contact" inputmode="tel" placeholder="+91 98xxxxxxxx" autocomplete="off">
   </label>
+  <p class="links"><a href="dashboard.html" target="_blank">Open activity dashboard →</a></p>
   <footer>Clipboard text never leaves this device. OwlCept keeps only a fingerprint (hash) of what you copy, for 24 hours.</footer>
   <script src="popup.js"></script>
 </body>

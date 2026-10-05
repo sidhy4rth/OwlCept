@@ -25,6 +25,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck -w @owlcept/extension
+      - run: npm test -w @owlcept/extension
       - run: npm run build -w @owlcept/extension
       - run: npx playwright install --with-deps chromium
       - name: Load the extension in Chromium and check copy, paste and popup

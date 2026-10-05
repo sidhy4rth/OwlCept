@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "description": "Stops fake-CAPTCHA \"paste and run\" (ClickFix) attacks and explains them in plain language. Clipboard text never leaves your device.",
   "minimum_chrome_version": "111",
-  "permissions": ["storage", "clipboardWrite", "nativeMessaging", "alarms"],
+  "permissions": ["storage", "clipboardWrite", "nativeMessaging", "alarms", "activeTab"],
   "background": { "service_worker": "background.js", "type": "module" },
   "content_scripts": [
     {

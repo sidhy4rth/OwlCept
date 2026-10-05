@@ -13,6 +13,8 @@ export interface BannerData {
   advice: string;
   /** Source host, used in the "Ask someone I trust" message. */
   host: string;
+  /** Finding ids, logged with an override. */
+  ids?: string[];
 }
 
 export interface BannerActions {
@@ -23,12 +25,14 @@ export interface BannerActions {
 }
 
 const OWL = `<svg viewBox="0 0 64 64" width="40" height="40" aria-hidden="true">
-<path d="M14 22 10 6l14 10q8-3 16 0L54 6l-4 16q6 10 4 22-4 14-22 16-18-2-22-16-2-12 4-22z" fill="#312E81"/>
-<ellipse cx="32" cy="49" rx="12" ry="8" fill="#4338CA"/>
-<circle cx="23" cy="30" r="9" fill="#F59E0B"/><circle cx="41" cy="30" r="9" fill="#F59E0B"/>
-<circle cx="23" cy="30" r="4.5" fill="#0F172A"/><circle cx="41" cy="30" r="4.5" fill="#0F172A"/>
-<circle cx="24.5" cy="28.5" r="1.5" fill="#fff"/><circle cx="42.5" cy="28.5" r="1.5" fill="#fff"/>
-<path d="m29 38h6l-3 6z" fill="#F59E0B"/></svg>`;
+<path d="M15 22 10 5l14 10q8-3 16 0L54 5l-5 17q7 10 5 22-4 15-22 16-18-1-22-16-2-12 5-22z" fill="#312E81"/>
+<ellipse cx="32" cy="49" rx="12" ry="9" fill="#4338CA"/>
+<circle cx="23" cy="30" r="10.5" fill="#4F46E5"/><circle cx="41" cy="30" r="10.5" fill="#4F46E5"/>
+<circle cx="23" cy="30" r="8" fill="#F59E0B"/><circle cx="23" cy="30" r="3.8" fill="#0F172A"/><circle cx="24.6" cy="28.4" r="1.4" fill="#fff"/>
+<circle cx="41" cy="30" r="8" fill="#F59E0B"/>
+<g stroke="#B91C1C" stroke-width="1.8" stroke-linecap="round" fill="none"><circle cx="41" cy="30" r="5"/><path d="M41 21.5v4.5M41 34v4.5M32.5 30H37M45 30h4.5"/></g>
+<path d="M13 18.5 26 22.5M38 22.5 51 18.5" stroke="#1E1B4B" stroke-width="2.6" stroke-linecap="round"/>
+<path d="M29 37h6l-3 6z" fill="#F59E0B"/></svg>`;
 
 const CSS = `
 :host { all: initial; }
