@@ -50,8 +50,8 @@ Engine time per call, 5 runs per sample after warm-up, on the machine that ran t
 
 | Checkpoint | p50 | p95 | max |
 |---|---|---|---|
-| Paste | 0.005 ms | 0.011 ms | 0.124 ms |
-| Commit | 0.005 ms | 0.011 ms | 0.114 ms |
+| Paste | 0.005 ms | 0.012 ms | 0.183 ms |
+| Commit | 0.005 ms | 0.010 ms | 0.121 ms |
 
 ## Explanations
 

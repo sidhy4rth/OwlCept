@@ -19,24 +19,26 @@ interface Rule {
   weight: number;
   severity: Severity;
   test: RegExp;
+  /** Words the text must contain (any one, lowercase) before the regex is worth running. */
+  needs?: string[];
 }
 
 // Static content rules. Order does not matter; weights add up and are capped later.
 const RULES: Rule[] = [
   {
-    id: 'remote-script-host',
+    id: 'remote-script-host', needs: ['mshta', 'regsvr32', 'rundll32', 'wmic', 'cmstp'],
     weight: 60,
     severity: 'critical',
     test: /\bmshta(?:\.exe)?\s+["']?(?:https?:|\\\\|javascript:|vbscript:)|\bregsvr32\b[^\n]{0,1024}\/i:\s*["']?(?:https?:|\\\\)|\bregsvr32\b[^\n]{0,1024}scrobj|\brundll32\b[^\n]{0,1024}(?:javascript:|url\.dll|shell32\.dll\s*,\s*shellexec_rundll)|\bwmic\b[^\n]{0,1024}\/format:\s*["']?(?:https?:|\\\\)|\bcmstp\b[^\n]{0,1024}\/s/i,
   },
-  { id: 'mshta-local', weight: 35, severity: 'high', test: /\bmshta(?:\.exe)?\s+["']?(?!https?:|\\\\)[^\s"']+\.hta\b/i },
-  { id: 'certutil-decode', weight: 35, severity: 'high', test: /\bcertutil(?:\.exe)?\b[^\n]{0,1024}(?:-decode|-decodehex|-urlcache)/i },
-  { id: 'finger-staging', weight: 50, severity: 'critical', test: /\bfinger(?:\.exe)?\s+\S+@\S+/i },
+  { id: 'mshta-local', needs: ['mshta'], weight: 35, severity: 'high', test: /\bmshta(?:\.exe)?\s+["']?(?!https?:|\\\\)[^\s"']+\.hta\b/i },
+  { id: 'certutil-decode', needs: ['certutil'], weight: 35, severity: 'high', test: /\bcertutil(?:\.exe)?\b[^\n]{0,1024}(?:-decode|-decodehex|-urlcache)/i },
+  { id: 'finger-staging', needs: ['finger'], weight: 50, severity: 'critical', test: /\bfinger(?:\.exe)?\s+\S+@\S+/i },
   {
-    id: 'dns-staging',
+    id: 'dns-staging', needs: ['nslookup', 'resolve-dnsname'],
     weight: 55,
     severity: 'critical',
-    test: /\bnslookup\b[^\n]{0,1024}(?:-q(?:uery)?=txt|-type=txt|\|\s*(?:findstr|iex|cmd|powershell)|\bfor\s+\/f)|\bfor\s+\/f[^\n]{0,1024}nslookup|resolve-dnsname\b[^\n]{0,1024}-type\s+txt[^\n]{0,1024}(?:iex|invoke-expression|\.strings)/i,
+    test: /\bnslookup\b[^\n]{0,256}(?:-q(?:uery)?=txt|-type=txt|\|\s*(?:findstr|iex|cmd|powershell)|\bfor\s+\/f)|\bfor\s+\/f[^\n]{0,256}nslookup|resolve-dnsname\b[^\n]{0,256}-type\s+txt[^\n]{0,256}(?:iex|invoke-expression|\.strings)/i,
   },
   {
     id: 'persistence',
@@ -45,7 +47,7 @@ const RULES: Rule[] = [
     test: /\bschtasks(?:\.exe)?\s+\/create\b|register-scheduledtask|new-scheduledtask|currentversion\\run(?:once)?\b|start menu\\programs\\startup\\\S|\bnew-service\b|\bsc(?:\.exe)?\s+create\b|__eventfilter|launchagents|launchdaemons|\|\s*crontab\b|crontab\s+-(?![a-z])|loginitems/i,
   },
   {
-    id: 'defense-evasion',
+    id: 'defense-evasion', needs: ['mppreference', 'amsi', 'realtimemonitoring', 'advfirewall', 'spctl'],
     weight: 50,
     severity: 'critical',
     test: /set-mppreference[^\n]{0,1024}-disable|add-mppreference[^\n]{0,1024}-exclusion|amsiutils|amsiinitfailed|amsiscanbuffer|disablerealtimemonitoring|\bnetsh\s+advfirewall\s+set\b[^\n]{0,1024}off|spctl\s+--master-disable/i,
@@ -58,15 +60,15 @@ const RULES: Rule[] = [
     test: /(?:%temp%|\$env:temp|%appdata%|\$env:appdata|%localappdata%|\$env:localappdata|%programdata%|\$env:programdata|%public%|\$env:public|\\appdata\\|\\temp\\|\/tmp\/|\/private\/tmp\/)[^\s'"]*\.(?:exe|scr|ps1|hta|vbs|vbe|js|jse|wsf|bat|cmd|msi|dll|lnk|app|command|pkg)\b/i,
   },
   { id: 'exec-policy-bypass', weight: 5, severity: 'low', test: /(?:^|\s)-(?:ep|exec|executionpolicy)\s+(?:bypass|unrestricted)\b|set-executionpolicy\s+(?:bypass|unrestricted)/i },
-  { id: 'mac-quarantine-strip', weight: 30, severity: 'high', test: /\bxattr\s+(?:-[a-z]*[dc][a-z]*\s+)+(?:com\.apple\.quarantine)?/i },
+  { id: 'mac-quarantine-strip', needs: ['xattr'], weight: 30, severity: 'high', test: /\bxattr\s+(?:-[a-z]*[dc][a-z]*\s+)+(?:com\.apple\.quarantine)?/i },
   {
-    id: 'password-prompt',
+    id: 'password-prompt', needs: ['osascript', 'dscl', 'security'],
     weight: 45,
     severity: 'critical',
     test: /osascript[^\n]{0,1024}display dialog[^\n]{0,1024}(?:hidden answer|password)|dscl\s+\.\s+-authonly|\bsecurity\s+(?:find-generic-password|find-internet-password|dump-keychain)/i,
   },
-  { id: 'decode-to-shell', weight: 40, severity: 'high', test: /base64\s+(?:-d|-D|--decode)[^\n]{0,1024}\|\s*(?:sudo\s+)?(?:sh|bash|zsh|python3?)\b|eval\s+["']?\$\(\s*echo[^\n]{0,1024}base64/i },
-  { id: 'reverse-shell', weight: 50, severity: 'critical', test: /\/dev\/tcp\/|\bnc(?:at)?\b[^\n]{0,1024}\s-e\s|net\.sockets\.tcpclient/i },
+  { id: 'decode-to-shell', needs: ['base64'], weight: 40, severity: 'high', test: /base64\s+(?:-d|-D|--decode)[^\n]{0,1024}\|\s*(?:sudo\s+)?(?:sh|bash|zsh|python3?)\b|eval\s+["']?\$\(\s*echo[^\n]{0,1024}base64/i },
+  { id: 'reverse-shell', needs: ['/dev/tcp', 'nc', 'tcpclient'], weight: 50, severity: 'critical', test: /\/dev\/tcp\/|\bnc(?:at)?\b[^\n]{0,1024}\s-e\s|net\.sockets\.tcpclient/i },
   {
     id: 'browser-data',
     weight: 40,
@@ -137,7 +139,11 @@ export function runRules(decoded: Decoded): RuleResult {
   }
 
   if (HIDDEN.test(all)) add('hidden-window', 'behaviour', 25, 'high');
-  for (const r of RULES) if (r.test.test(all)) add(r.id, 'behaviour', r.weight, r.severity, shownHost ? { host: shownHost } : undefined);
+  const lower = all.toLowerCase();
+  for (const r of RULES) {
+    if (r.needs && !r.needs.some((w) => lower.includes(w))) continue;
+    if (r.test.test(all)) add(r.id, 'behaviour', r.weight, r.severity, shownHost ? { host: shownHost } : undefined);
+  }
   if (REMOTE_MSI.test(all) && !(hosts.length > 0 && nonInstaller.length === 0)) {
     add('remote-script-host', 'behaviour', 60, 'critical', shownHost ? { host: shownHost } : undefined);
   }

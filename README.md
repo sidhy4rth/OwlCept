@@ -32,7 +32,7 @@
 ![Languages](https://img.shields.io/badge/warnings-English_·_Hindi_·_Kannada-B91C1C)
 ![False prompts](https://img.shields.io/badge/false_prompts-0_of_650_documented_commands-15803D)
 ![Latency](https://img.shields.io/badge/engine_p95-under_0.1_ms-0F172A)
-![Worst case](https://img.shields.io/badge/worst_case-~24_ms_on_200_KB-0F172A)
+![Worst case](https://img.shields.io/badge/worst_case-~7_ms_on_200_KB-0F172A)
 
 [**Download**](https://github.com/sidhy4rth/OwlCept/releases/latest) ·
 [**How it works**](#how-it-works) ·
@@ -96,7 +96,7 @@ in their own language, what the page tried to make them do.
 | **Opt-in lure reporting** | "Report this page" opens Google Safe Browsing's public report form with the lure URL filled in, and only when clicked. |
 | **Runs a whole lab** | Colleges set and lock every setting by Group Policy or Intune ([deploy guide](docs/DEPLOY.md)), then drop every PC's export into the **fleet view** to see campaigns across devices. No server. |
 | **Shows its work** | "How OwlCept read it, step by step": every layer it decoded, which decoder produced it and which disguises came off, in English, Hindi and Kannada (`owlcept check --trace` on the command line). |
-| **Fails safe, not open** | A stress test feeds the engine 1,700 pathological inputs up to 200 KB in CI; the worst takes ~24 ms. Anything it cannot finish decoding within its 150 ms budget is at least a warning, never a silent pass. |
+| **Fails safe, not open** | A stress test feeds the engine 1,700 pathological inputs up to 200 KB in CI; the worst takes ~7 ms. Anything it cannot finish decoding within its 150 ms budget is at least a warning, never a silent pass. |
 | **Organisation rules** | IT can block hosts (any command that would contact them is stopped) and approve exact commands by SHA-256 fingerprint (the college's own setup script never prompts). Policy-only: a page or the user cannot set them. |
 | **Signed exports and incident reports** | Each browser signs its fleet exports with its own non-extractable ECDSA key; the fleet view rejects edited files. Every event has a printable incident report with tailored next steps and a signed evidence file. |
 | **Measures its own explanations** | A review tool for the brief's "two reviewers score 50 warnings": seeded packs, keyboard scoring in three languages, accuracy against 90% and Cohen's κ. |
