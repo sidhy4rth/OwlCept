@@ -4,7 +4,7 @@
 
 import { buildReport, reasonLabel as label, signReport, summarize, type ActivityEvent } from '@owlcept/engine';
 import { deviceKeyId, deviceKeys } from './keystore.ts';
-import type { PopupState, Settings } from './messages.ts';
+import { eventKey, type PopupState, type Settings } from './messages.ts';
 import { defang, normalizeSite, reportUrl, type Mode } from './policy.ts';
 import { saveSettings } from './settings-store.ts';
 import type { LangSetting } from './strings.ts';
@@ -119,7 +119,10 @@ function renderHistory(): void {
       const site = el('td', { className: 'site', textContent: e.host || '—' });
       if (e.url) site.append(el('small', { textContent: defang(e.url) }));
       const why = el('td', { textContent: e.ids.filter((id) => !['script-copy', 'Microsoft', 'Google'].includes(id)).slice(0, 3).map(label).join(' · ') });
-      const act = el('td');
+      const act = el('td', { className: 'acts' });
+      const details = el('button', { className: 'small', textContent: 'Details', title: 'Printable incident report and signed evidence' });
+      details.addEventListener('click', () => window.open(`incident.html?e=${encodeURIComponent(eventKey(e))}`, '_blank'));
+      act.append(details);
       if (e.url) {
         const b = el('button', { className: 'small', textContent: 'Report', title: 'Opens Google Safe Browsing’s report form with this address filled in' });
         b.addEventListener('click', () => window.open(reportUrl(e.url!), '_blank', 'noopener'));

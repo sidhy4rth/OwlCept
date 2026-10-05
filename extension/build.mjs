@@ -15,6 +15,7 @@ const configs = [
   { ...common, entryPoints: ['src/content.ts'], outfile: `${out}content.js`, format: 'iife' },
   { ...common, entryPoints: ['src/popup.ts'], outfile: `${out}popup.js`, format: 'iife' },
   { ...common, entryPoints: ['src/dashboard.ts'], outfile: `${out}dashboard.js`, format: 'iife' },
+  { ...common, entryPoints: ['src/incident.ts'], outfile: `${out}incident.js`, format: 'iife' },
   { ...common, entryPoints: ['src/background.ts'], outfile: `${out}background.js`, format: 'esm' },
 ];
 

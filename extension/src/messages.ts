@@ -9,6 +9,9 @@ import type { Mode } from './policy.ts';
 /** One entry in the local activity log: hashes and metadata only. */
 export type OwlEvent = ActivityEvent;
 
+/** Addresses one event (time, kind and host are unique in practice and stable across reloads). */
+export const eventKey = (e: ActivityEvent): string => `${e.time}:${e.kind}:${e.host}`;
+
 export interface Settings {
   lang: LangSetting;
   /** Optional WhatsApp number (digits, with country code) for "Ask someone I trust". */

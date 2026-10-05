@@ -172,7 +172,7 @@ check('dashboard draws the chart and history', (await dash.locator('#chart rect'
 const reportHref = await dash.evaluate(() => {
   let opened = '';
   window.open = (u) => { opened = String(u); return null; };
-  document.querySelector('#history button.small')?.click();
+  document.querySelector('#history button[title^="Opens Google"]')?.click();
   return opened;
 });
 check('Report opens Safe Browsing with the lure URL; the list shows it defanged',
@@ -190,6 +190,21 @@ await dash.waitForTimeout(400);
 check('adding a trusted site from the dashboard normalises it', (await dash.textContent('#trusted')).includes('docs.example.test'));
 await dash.click('#trusted button');
 await dash.waitForTimeout(300);
+// 6b. Incident report from the first blocked entry with a page address.
+const firstBlock = stored.find((e) => e.kind === 'copy-block' && e.url);
+const incident = await context.newPage();
+await incident.setViewportSize({ width: 900, height: 1100 });
+await incident.goto(`chrome-extension://${extId}/incident.html?e=${encodeURIComponent(`${firstBlock.time}:${firstBlock.kind}:${firstBlock.host}`)}`);
+await incident.waitForSelector('#report:not([hidden])');
+const incidentText = await incident.textContent('#report');
+check('incident report shows the event, its fingerprint and next steps',
+  (await incident.textContent('#title')) === 'Blocked a dangerous copy' && incidentText.includes(firstBlock.hash ?? '') && incidentText.includes('hxxps://') && /blocklist/.test(await incident.textContent('#todo')));
+const [evDl] = await Promise.all([incident.waitForEvent('download'), incident.click('#evidence')]);
+const evidenceText = readFileSync(await evDl.path(), 'utf8');
+const evidence = await verifyReport(evidenceText);
+check('signed evidence file verifies and holds exactly that event', evidence.status === 'verified' && parseReport(evidenceText).events.length === 1 && parseReport(evidenceText).events[0].time === firstBlock.time);
+if (shots) await incident.screenshot({ path: `${shots}ext-incident.png`, fullPage: true });
+
 if (shots) { await dash.evaluate(() => scrollTo(0, 0)); await dash.screenshot({ path: `${shots}ext-dashboard.png`, clip: { x: 0, y: 0, width: 1180, height: 1160 } }); }
 
 // 7. Privacy: nothing left the device during the whole run.
