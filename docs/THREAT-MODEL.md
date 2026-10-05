@@ -39,6 +39,9 @@ where it meets them.
    metadata cross it.
 3. **Organisation → extension.** Browser policy under `HKLM` (admin-only) overrides and
    locks settings; values are validated (`clean()`) because policy is still input.
+   Blocked hosts and approved commands are organisation-only: values in local storage
+   are ignored, so neither a page nor the user can approve a command. Checked end to end
+   against a real managed-policy file in CI.
 4. **Exports → fleet view.** Files are untrusted; the page's CSP forbids any network
    connection.
 

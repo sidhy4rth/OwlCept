@@ -32,6 +32,7 @@
 ![Languages](https://img.shields.io/badge/warnings-English_·_Hindi_·_Kannada-B91C1C)
 ![False prompts](https://img.shields.io/badge/false_prompts-0_of_650_documented_commands-15803D)
 ![Latency](https://img.shields.io/badge/engine_p95-under_0.1_ms-0F172A)
+![Worst case](https://img.shields.io/badge/worst_case-~24_ms_on_200_KB-0F172A)
 
 [**Download**](https://github.com/sidhy4rth/OwlCept/releases/latest) ·
 [**How it works**](#how-it-works) ·
@@ -61,7 +62,7 @@
 <td align="center"><h3>3</h3>warning languages<br><sub>English · Hindi · Kannada</sub></td>
 <td align="center"><h3>0 / 650</h3>false prompts<br><sub>on commands from<br>official docs</sub></td>
 <td align="center"><h3>0</h3>bytes of clipboard<br>sent anywhere</td>
-<td align="center"><h3>159</h3>tests<br><sub>131 unit + 28 in a<br>real browser</sub></td>
+<td align="center"><h3>212</h3>tests<br><sub>160 unit + 52 in a<br>real browser</sub></td>
 </tr>
 </table>
 
@@ -94,6 +95,11 @@ in their own language, what the page tried to make them do.
 | **Activity dashboard** | What was stopped, where and why, a 30-day chart, the same command stopped on several pages, searchable history, CSV and JSON export, and a weekly WhatsApp summary for a trusted person. |
 | **Opt-in lure reporting** | "Report this page" opens Google Safe Browsing's public report form with the lure URL filled in, and only when clicked. |
 | **Runs a whole lab** | Colleges set and lock every setting by Group Policy or Intune ([deploy guide](docs/DEPLOY.md)), then drop every PC's export into the **fleet view** to see campaigns across devices. No server. |
+| **Shows its work** | "How OwlCept read it, step by step": every layer it decoded, which decoder produced it and which disguises came off, in English, Hindi and Kannada (`owlcept check --trace` on the command line). |
+| **Fails safe, not open** | A stress test feeds the engine 1,700 pathological inputs up to 200 KB in CI; the worst takes ~24 ms. Anything it cannot finish decoding within its 150 ms budget is at least a warning, never a silent pass. |
+| **Organisation rules** | IT can block hosts (any command that would contact them is stopped) and approve exact commands by SHA-256 fingerprint (the college's own setup script never prompts). Policy-only: a page or the user cannot set them. |
+| **Signed exports and incident reports** | Each browser signs its fleet exports with its own non-extractable ECDSA key; the fleet view rejects edited files. Every event has a printable incident report with tailored next steps and a signed evidence file. |
+| **Measures its own explanations** | A review tool for the brief's "two reviewers score 50 warnings": seeded packs, keyboard scoring in three languages, accuracy against 90% and Cohen's κ. |
 | **Keeps nothing readable** | Only a SHA-256 fingerprint of each copy is kept, for 24 hours. The web checker's Content-Security-Policy forbids every network connection. |
 
 <table>
@@ -149,7 +155,8 @@ flowchart LR
 | [`extension`](extension) | Edge and Chrome extension (Manifest V3): copy checkpoint, ConsentFix paste guard, warning banner, popup, native-messaging bridge to the agent. | ✅ tested in Chromium on every push |
 | [`web`](web) | **OwlCept Check**: paste a command, see what it really does. Static, works from `file://`, CSP blocks every connection. | ✅ builds on every push |
 | [`android`](android) | Kotlin app wrapping OwlCept Check offline: share target, "Check with OwlCept" on selected text, clipboard button, Quick Settings tile. **Zero permissions.** | ✅ APK on every release |
-| [`web/fleet.html`](web/README.md#fleet-view) | **Fleet view**: drop in every PC's export; per-device counts, lure sites as a DNS blocklist, campaigns across devices, audit-mode near-misses. Offline. | ✅ tested with hostile files |
+| [`web/fleet.html`](web/README.md#fleet-view) | **Fleet view**: drop in every PC's export; signatures verified, per-device counts, campaigns across devices, audit-mode near-misses, and **one-click blocklist policy** (PowerShell, .reg, JSON) from the lure sites. Offline. | ✅ tested with hostile, edited and re-keyed files |
+| [`web/review.html`](web/README.md#warning-review) | **Warning review**: score a pack of real warnings, merge two reviewers into accuracy and Cohen's κ. | ✅ full two-reviewer run in CI |
 | [`packages/engine/cli`](packages/engine/cli/owlcept.ts) | **`owlcept` CLI**: `check`, `oauth`, and a JSON-lines `serve` mode for the agent; exit status 0/1/2 for allow/warn/block. | ✅ single-file release asset |
 | [`bench`](bench) | Benchmark harness against the brief's targets. 650 commands from official docs ship with it; the team's defanged attack corpus drops in as JSONL. | ✅ [report](docs/BENCHMARK.md) in CI |
 | [`deploy`](deploy) | Policy script for Chrome and Edge, example `.reg`, Native Messaging host manifest. | ✅ tested on a Windows runner |
@@ -192,8 +199,9 @@ flowchart LR
 | Android | Kotlin 2.0, Android Gradle Plugin 8.7, SDK 35 (min 26), AndroidX WebKit `WebViewAssetLoader`, Quick Settings `TileService`, `PROCESS_TEXT` and share intents |
 | Windows agent | Team in progress; embeds the same engine through its single-file host bundle |
 | Testing | `node:test` unit tests; Playwright 1.63 loads the built extension into real Chromium (modes, dashboard, export, and a network capture proving 0 bytes leave); the fleet view is tested with hostile files |
-| Benchmark | `bench/run.ts`: copy, paste and commit checkpoints per sample, false-prompt rate, latency p95, warning coverage in 3 languages; fails CI on a regression |
-| Deployment | `chrome.storage.managed` schema, PowerShell policy script for Chrome and Edge (tested on `windows-latest`), fixed extension ID via the manifest key |
+| Benchmark | `bench/run.ts`: copy, paste and commit checkpoints per sample, false-prompt rate, latency p95, warning coverage in 3 languages; `bench/stress.ts`: worst case on 1,700 pathological inputs; `bench/review-pack.ts`: seeded review samples. All fail CI on a regression |
+| Cryptography | WebCrypto ECDSA P-256 (non-extractable device keys in IndexedDB, signatures over canonical JSON); a pure-TypeScript SHA-256 so fingerprints match inside hosts without WebCrypto |
+| Deployment | `chrome.storage.managed` schema, PowerShell policy script for Chrome and Edge (tested on `windows-latest`), fixed extension ID via the manifest key; a real managed-policy file is read by Chromium in Linux CI |
 | CI/CD | GitHub Actions: one workflow per part plus Benchmark and Deployment kit, CodeQL (TypeScript + Actions), tag-triggered release that attaches the extension zip, web zip, APK and CLI |
 | Logo | Hand-written SVG with CSS keyframes (`scripts/logo.mjs`), rendered to MP4/GIF with Playwright + ffmpeg; honours `prefers-reduced-motion` |
 
@@ -218,10 +226,13 @@ does and holds the aim pose for people who prefer reduced motion. MP4 and GIF cu
 npm ci
 npm test                                   # engine + extension unit tests
 npm run bench                              # benchmark → docs/BENCHMARK.md
+npm run stress                             # worst-case timing on pathological input
+npm run review-pack                        # warning-review sample → bench/review/pack.json
 npm run build                              # extension → extension/dist, web → web/dist
 npx playwright install chromium
-npm run test:browser                       # extension (19 checks) and web pages (9) in Chromium
-npm run owlcept -- check "git status"      # the CLI from source
+npm run test:browser                       # extension (22 checks) and web pages (25) in Chromium
+npm run owlcept -- check "git status" --trace   # the CLI from source
+npm run owlcept -- hash "<command>"        # fingerprint for the approvedCommands policy
 cd android && ./gradlew assembleDebug      # after npm run build -w @owlcept/web; needs JDK 17
 ```
 

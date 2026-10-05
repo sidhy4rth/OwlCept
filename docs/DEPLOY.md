@@ -9,6 +9,9 @@ without any server and without clipboard text ever leaving a PC.
 | Same settings on every PC, locked | Browser policy for the extension, set by [`Set-OwlCeptPolicy.ps1`](../deploy/windows/Set-OwlCeptPolicy.ps1) or the example [`.reg`](../deploy/windows/owlcept-policy-example.reg) |
 | Install it on every PC | Force-install through Chrome or Edge policy (below) |
 | See what was stopped across PCs | Each PC exports its log from the dashboard; the [fleet view](../web/README.md#fleet-view) merges the files in the browser |
+| Block a campaign everywhere | Fleet view → tick its lure sites → **Block these sites on every PC** → deploy the generated PowerShell, `.reg` or JSON |
+| Approve the college's own scripts | `owlcept hash "<command>"` → add the fingerprint to `approvedCommands` |
+| Trust the numbers | Exports are signed per device; the fleet view rejects edited files and flags key changes. Each event has a printable incident report and a signed evidence file for the ticket |
 | Measure before enforcing | Start in **audit** mode for a week: everything is logged, nobody is interrupted. Check the fleet view, add the college's own doc sites as trusted, then switch to **smart** |
 
 The extension ID is fixed by the public key in the manifest: **`jjkhmdbenclipofjaeeblabpmjdcibpi`**.

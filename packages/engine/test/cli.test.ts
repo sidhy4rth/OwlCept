@@ -50,7 +50,7 @@ test('serve: one JSON reply per request line, errors reported per line', () => {
 test('usage errors exit 64', () => {
   assert.equal(run(['check', 'x', '--target', 'moon']).status, 64);
   assert.equal(run(['frobnicate']).status, 64);
-  assert.equal(run(['--version']).stdout.trim(), '0.2.0');
+  assert.equal(run(['--version']).stdout.trim(), '0.3.0');
 });
 
 test('check --trace prints every decoding step', () => {

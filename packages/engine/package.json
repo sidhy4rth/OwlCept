@@ -1,6 +1,6 @@
 {
   "name": "@owlcept/engine",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Command-risk and plain-language explanation engine for OwlCept.",
   "license": "MIT",
   "type": "module",

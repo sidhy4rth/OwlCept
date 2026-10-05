@@ -19,4 +19,4 @@ function analyzeJson(requestJson: string): string {
   return JSON.stringify({ verdict, explanation });
 }
 
-(globalThis as Record<string, unknown>).OwlCept = { analyzeJson, normalizeForHash, version: '0.2.0' };
+(globalThis as Record<string, unknown>).OwlCept = { analyzeJson, normalizeForHash, version: '0.3.0' };

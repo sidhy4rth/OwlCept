@@ -14,7 +14,7 @@ import { createInterface } from 'node:readline';
 import { analyze, checkOAuthPaste, describeTrick, explain, explainConsentFix, normalizeForHash, sha256Hex } from '../src/index.ts';
 import type { AnalyzeContext, CustodyRecord, Lang, PasteTarget, Verdict } from '../src/types.ts';
 
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 const TARGETS = new Set(['run', 'terminal', 'explorer', 'web', 'unknown']);
 const LANGS = new Set(['en', 'hi', 'kn']);
 const EXIT = { allow: 0, warn: 1, block: 2 } as const;

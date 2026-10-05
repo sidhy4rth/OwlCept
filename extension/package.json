@@ -1,6 +1,6 @@
 {
   "name": "@owlcept/extension",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "OwlCept browser extension for Edge and Chrome (Manifest V3).",
   "license": "MIT",
