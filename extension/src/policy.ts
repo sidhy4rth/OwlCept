@@ -60,3 +60,13 @@ export function decide(p: PolicyInput): Decision {
   // Smart mode warning: a small toast, unless the agent will check the paste itself.
   return { show: p.agentConnected ? 'none' : 'toast', replaceClipboard: false, log: 'warn' };
 }
+
+/** Google Safe Browsing's public report form, pre-filled. Opened only when the user clicks. */
+export function reportUrl(pageUrl: string): string {
+  return `https://safebrowsing.google.com/safebrowsing/report_phish/?url=${encodeURIComponent(pageUrl)}`;
+}
+
+/** Display form that cannot be clicked by accident: hxxps://example[.]test/path */
+export function defang(url: string): string {
+  return url.replace(/^http/i, 'hxxp').replace(/\.(?=[^\/]*(?:\/|$))/g, '[.]');
+}

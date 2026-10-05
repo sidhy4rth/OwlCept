@@ -1,0 +1,41 @@
+// Short labels for finding ids, used in the popup and the dashboard lists.
+// The full sentences people read in a warning come from the engine's explain().
+
+export const REASON: Record<string, string> = {
+  'hidden-copy': 'copied text was hidden',
+  'lure-words': 'page said to press Win+R',
+  'fake-captcha': 'fake CAPTCHA',
+  'download-exec': 'download and run',
+  'download-file': 'downloads a file',
+  'remote-script-host': 'runs code from the internet',
+  'mshta-local': 'runs an HTML application',
+  'certutil-decode': 'misuses certutil',
+  'finger-staging': 'fetches instructions with finger',
+  'dns-staging': 'hides instructions in DNS',
+  persistence: 'starts with the computer',
+  'defense-evasion': 'turns off antivirus',
+  'clear-tracks': 'covers its tracks',
+  'temp-exec': 'runs from a temp folder',
+  'exec-policy-bypass': 'bypasses script policy',
+  'mac-quarantine-strip': 'skips macOS download check',
+  'password-prompt': 'asks for your password',
+  'decode-to-shell': 'runs hidden text',
+  'reverse-shell': 'remote control',
+  'browser-data': 'reaches for saved passwords',
+  'ip-address': 'connects to a bare IP',
+  'risky-domain': 'scam-prone web address',
+  'staging-host': 'free file/tunnel service',
+  'network-share': 'runs from a network share',
+  'plain-http': 'unencrypted download',
+  'decoy-comment': 'fake "not a robot" note',
+  'decoy-path': 'fake file path',
+  obfuscated: 'disguised command',
+  'hidden-window': 'runs invisibly',
+  consentfix: 'sign-in code pasted into another site',
+  'from-chat': 'came from a chat',
+  'from-email': 'came from an email',
+  'from-pdf': 'came from a PDF',
+  'from-ai': 'came from a chatbot answer',
+};
+
+export const label = (id: string): string => REASON[id] ?? id.replace(/-/g, ' ');

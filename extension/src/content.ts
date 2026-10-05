@@ -9,7 +9,7 @@ import { DEFAULT_SETTINGS, type Settings, type StatusReply, type ToBackground, t
 import { readLureContext } from './page-context.ts';
 import { UI, fill, resolveLang } from './strings.ts';
 import { checkVisibility } from './visibility.ts';
-import { decide } from './policy.ts';
+import { decide, reportUrl } from './policy.ts';
 
 const TAG = '__owlcept__';
 const CLICK_RELEVANCE_MS = 5000;
@@ -30,8 +30,9 @@ void send<StatusReply>({ type: 'status' }).then((s) => {
   settings = s.settings;
   agentConnected = s.agentConnected;
 });
-chrome.storage.onChanged.addListener((changes) => {
-  if (changes.settings?.newValue) settings = { ...DEFAULT_SETTINGS, ...changes.settings.newValue };
+// Re-read through the background so organisation policy keeps winning over local changes.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'managed' || changes.settings) void send<StatusReply>({ type: 'status' }).then((s) => s && (settings = s.settings));
 });
 
 const lang = (): Lang => resolveLang(settings.lang, chrome.i18n?.getUILanguage?.() ?? navigator.language);
@@ -120,7 +121,7 @@ function guardOAuthPaste(e: ClipboardEvent | DragEvent | InputEvent, text: strin
   if (!d.block || !d.code) return;
   // A sign-in code in the wrong site is always a block; only audit mode lets it through (and logs it).
   const audit = settings.mode === 'audit';
-  void send({ type: 'consentfix', host: pageHost(), provider: d.code.provider, note: audit ? 'audit' : undefined });
+  void send({ type: 'consentfix', host: pageHost(), provider: d.code.provider, url: location.href, note: audit ? 'audit' : undefined });
   if (audit) return;
   e.preventDefault();
   e.stopImmediatePropagation();
@@ -153,8 +154,9 @@ function render(data: BannerData, original: string | null, show: 'toast' | 'bann
       const digits = settings.contact.replace(/\D/g, '');
       window.open(`https://wa.me/${digits}?text=${encodeURIComponent(askMessage(data))}`, '_blank', 'noopener');
     },
+    onReport: settings.reportLures && data.kind !== 'warn' ? () => window.open(reportUrl(location.href), '_blank', 'noopener') : undefined,
     onCopyAnyway:
-      original === null
+      original === null || !settings.allowCopyAnyway
         ? undefined
         : async () => {
             void send({ type: 'override', host: data.host, ids: data.ids ?? [] });

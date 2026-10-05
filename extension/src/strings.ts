@@ -14,6 +14,7 @@ export interface UiStrings {
   careful: string;
   askMessage: string;
   blockedLine: string;
+  report: string;
 }
 
 export const UI: Record<Lang, UiStrings> = {
@@ -28,6 +29,7 @@ export const UI: Record<Lang, UiStrings> = {
     careful: 'OwlCept: check before you run this',
     askMessage: 'OwlCept stopped a suspicious command on my computer. It came from {host}. {detail} Can you help me check?',
     blockedLine: '# OwlCept blocked a hidden command from {host}. Do not run anything this page tells you to.',
+    report: 'Report this page',
   },
   hi: {
     close: 'यह पेज बंद करें',
@@ -40,6 +42,7 @@ export const UI: Record<Lang, UiStrings> = {
     careful: 'OwlCept: चलाने से पहले जाँच लें',
     askMessage: 'OwlCept ने मेरे कंप्यूटर पर एक संदिग्ध कमांड रोका। यह {host} से आया था। {detail} क्या आप जाँचने में मेरी मदद कर सकते हैं?',
     blockedLine: '# OwlCept blocked a hidden command from {host}. Do not run anything this page tells you to.',
+    report: 'इस पेज की रिपोर्ट करें',
   },
   kn: {
     close: 'ಈ ಪುಟವನ್ನು ಮುಚ್ಚಿ',
@@ -52,6 +55,7 @@ export const UI: Record<Lang, UiStrings> = {
     careful: 'OwlCept: ಚಲಾಯಿಸುವ ಮೊದಲು ಪರಿಶೀಲಿಸಿ',
     askMessage: 'OwlCept ನನ್ನ ಕಂಪ್ಯೂಟರ್‌ನಲ್ಲಿ ಒಂದು ಸಂಶಯಾಸ್ಪದ ಕಮಾಂಡ್ ಅನ್ನು ತಡೆಹಿಡಿಯಿತು. ಇದು {host} ನಿಂದ ಬಂದಿತ್ತು. {detail} ಪರಿಶೀಲಿಸಲು ನನಗೆ ಸಹಾಯ ಮಾಡುತ್ತೀರಾ?',
     blockedLine: '# OwlCept blocked a hidden command from {host}. Do not run anything this page tells you to.',
+    report: 'ಈ ಪುಟವನ್ನು ವರದಿ ಮಾಡಿ',
   },
 };
 

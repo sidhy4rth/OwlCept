@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OwlCept activity</title>
+<link rel="icon" href="icons/owl-32.png">
+<link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><img src="icons/owl.svg" width="36" height="36" alt=""><div><h1>OwlCept activity</h1><p id="status">Loading…</p></div></div>
+  <nav class="range" aria-label="Time range">
+    <button data-days="7">7 days</button><button data-days="30" class="on">30 days</button><button data-days="90">90 days</button>
+  </nav>
+</header>
+
+<main>
+  <section class="cards" aria-label="Summary">
+    <div class="card red"><b id="n-blocked">0</b><span>commands blocked</span></div>
+    <div class="card amber"><b id="n-warned">0</b><span>warnings</span></div>
+    <div class="card indigo"><b id="n-consentfix">0</b><span>sign-in codes stopped</span></div>
+    <div class="card slate"><b id="n-overrides">0</b><span>copied anyway</span></div>
+    <div class="card slate"><b id="n-silent">0</b><span>logged silently<br><small>audit mode or trusted site</small></span></div>
+  </section>
+
+  <section class="panel">
+    <h2>Per day</h2>
+    <div id="chart" class="chart" role="img" aria-label="Blocks and warnings per day"></div>
+    <p class="legend"><i class="sw red"></i>blocked &nbsp; <i class="sw amber"></i>warned</p>
+  </section>
+
+  <div class="two">
+    <section class="panel"><h2>Where it came from</h2><ol id="top-hosts" class="bars"></ol></section>
+    <section class="panel"><h2>Why it was stopped</h2><ol id="top-reasons" class="bars"></ol></section>
+  </div>
+
+  <section class="panel" id="campaign" hidden>
+    <h2>Same command stopped more than once</h2>
+    <p class="muted">The same clipboard item (matched by fingerprint) was stopped on several pages. That usually means one campaign.</p>
+    <ol id="repeated" class="bars"></ol>
+  </section>
+
+  <section class="panel">
+    <div class="row-head">
+      <h2>History</h2>
+      <div class="filters">
+        <input id="search" type="search" placeholder="Filter by site" aria-label="Filter by site">
+        <select id="kind" aria-label="Filter by kind">
+          <option value="">Everything</option><option value="copy-block">Blocked</option><option value="copy-warn">Warned</option>
+          <option value="consentfix">Sign-in codes</option><option value="override">Copied anyway</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>When</th><th>What</th><th>Site</th><th>Why</th><th></th></tr></thead>
+      <tbody id="history"></tbody>
+    </table></div>
+    <p id="empty" class="muted" hidden>Nothing here yet. When OwlCept stops something, it shows up here.</p>
+  </section>
+
+  <div class="two">
+    <section class="panel">
+      <h2>Family view</h2>
+      <p class="muted">Send a short weekly summary to your trusted person. It lists counts and websites only, never what was copied.</p>
+      <pre id="summary" class="summary"></pre>
+      <div class="actions"><button id="send-summary" class="primary">Send on WhatsApp</button><button id="copy-summary">Copy text</button></div>
+      <p id="no-contact" class="muted" hidden>Add a trusted person's WhatsApp number in Settings to send it.</p>
+    </section>
+    <section class="panel">
+      <h2>Export</h2>
+      <p class="muted">For a college or office: export this device's log and open it with the other devices' exports in the <a href="https://github.com/sidhy4rth/OwlCept/tree/main/web#fleet-view" target="_blank" rel="noopener">OwlCept fleet view</a>. Hashes and metadata only.</p>
+      <div class="actions"><button id="export-json" class="primary">Export for fleet view (.json)</button><button id="export-csv">Export as spreadsheet (.csv)</button></div>
+      <div class="actions danger-zone"><button id="clear" class="link">Clear history…</button><span id="clear-confirm" hidden>Delete every entry on this device? <button id="clear-yes" class="danger">Delete</button> <button id="clear-no" class="link">Keep</button></span></div>
+    </section>
+  </div>
+
+  <section class="panel settings" id="settings">
+    <h2>Settings</h2>
+    <p id="locked" class="locked" hidden>Settings marked 🔒 are set by your organisation.</p>
+    <div class="grid">
+      <label>Protection
+        <select id="mode">
+          <option value="smart">Smart: block attacks, warn on doubtful commands</option>
+          <option value="strict">Strict: block anything doubtful</option>
+          <option value="audit">Audit: log only, never interrupt</option>
+        </select>
+      </label>
+      <label>Warning language
+        <select id="lang"><option value="auto">Automatic</option><option value="en">English</option><option value="hi">हिन्दी (Hindi)</option><option value="kn">ಕನ್ನಡ (Kannada)</option></select>
+      </label>
+      <label>Trusted person's WhatsApp number
+        <input id="contact" inputmode="tel" placeholder="+91 98xxxxxxxx" autocomplete="off">
+      </label>
+      <label>Name of this device (for exports)
+        <input id="device-label" placeholder="e.g. Library PC 4" maxlength="80" autocomplete="off">
+      </label>
+    </div>
+    <label class="check"><input type="checkbox" id="report-lures"> <span>Show <b>Report this page</b> on blocked pages. Clicking it opens Google Safe Browsing's public report form with the page address filled in. Nothing is sent unless you click.</span></label>
+    <h3>Trusted sites</h3>
+    <p class="muted">Warnings are skipped on these sites and their subdomains. Blocks still apply: real sites get hacked to show fake CAPTCHAs.</p>
+    <ul id="trusted" class="chips"></ul>
+    <form id="trust-form" class="actions"><input id="trust-input" placeholder="docs.example.com" aria-label="Add a trusted site"><button>Add</button><span id="trust-error" class="error" hidden>That is not a website address.</span></form>
+  </section>
+</main>
+
+<footer>Clipboard text never leaves this device. OwlCept keeps a fingerprint (hash) of each copy for 24 hours and this log of what it stopped.</footer>
+<script src="dashboard.js"></script>
+</body>
+</html>

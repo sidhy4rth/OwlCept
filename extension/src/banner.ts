@@ -20,6 +20,8 @@ export interface BannerData {
 export interface BannerActions {
   onClose: () => void;
   onAsk: () => void;
+  /** Present when the user opted in to reporting lure pages. */
+  onReport?: () => void;
   /** Present when the user may restore the original copy after typing COPY. */
   onCopyAnyway?: () => Promise<void>;
 }
@@ -89,6 +91,7 @@ export function showBanner(data: BannerData, actions: BannerActions): void {
       <div class="row">
         <button class="primary" data-a="close">${esc(ui.close)}</button>
         <button data-a="ask">${esc(ui.ask)}</button>
+        ${actions.onReport ? `<button class="link" data-a="report">${esc(ui.report)}</button>` : ''}
         <button class="link" data-a="dismiss">${esc(ui.dismiss)}</button>
         ${actions.onCopyAnyway ? `<button class="link" data-a="anyway">${esc(ui.copyAnyway)}</button>` : ''}
       </div>
@@ -108,6 +111,7 @@ export function showBanner(data: BannerData, actions: BannerActions): void {
     const a = (e.target as Element).closest('button')?.getAttribute('data-a');
     if (a === 'close') actions.onClose();
     else if (a === 'ask') actions.onAsk();
+    else if (a === 'report') actions.onReport?.();
     else if (a === 'dismiss') hideBanner();
     else if (a === 'anyway') {
       confirmRow.classList.add('on');

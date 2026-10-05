@@ -1,0 +1,43 @@
+{
+  "type": "object",
+  "properties": {
+    "mode": {
+      "title": "Protection mode",
+      "description": "audit: log only, never interrupt. smart: block attacks, warn on doubtful commands (default). strict: every warning blocks.",
+      "type": "string",
+      "enum": ["audit", "smart", "strict"]
+    },
+    "lang": {
+      "title": "Warning language",
+      "description": "auto follows the browser language; en, hi or kn forces English, Hindi or Kannada.",
+      "type": "string",
+      "enum": ["auto", "en", "hi", "kn"]
+    },
+    "trustedSites": {
+      "title": "Trusted sites",
+      "description": "Hosts (and their subdomains) whose warnings are skipped, such as the college's own documentation site. Blocks still apply.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "contact": {
+      "title": "Help-desk WhatsApp number",
+      "description": "Digits with country code. 'Ask someone I trust' sends the warning here.",
+      "type": "string"
+    },
+    "allowCopyAnyway": {
+      "title": "Allow 'Copy anyway'",
+      "description": "false removes the option to restore a blocked copy.",
+      "type": "boolean"
+    },
+    "reportLures": {
+      "title": "Offer 'Report this page'",
+      "description": "Shows a button on blocked pages that opens Google Safe Browsing's report form. Nothing is sent unless the user clicks.",
+      "type": "boolean"
+    },
+    "deviceLabel": {
+      "title": "Device name in exports",
+      "description": "Label shown for this device in the fleet view.",
+      "type": "string"
+    }
+  }
+}

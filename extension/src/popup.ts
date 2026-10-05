@@ -1,23 +1,9 @@
 import type { OwlEvent, PopupState, Settings } from './messages.ts';
 import type { LangSetting } from './strings.ts';
 import { isTrusted, normalizeSite, type Mode } from './policy.ts';
+import { REASON } from './labels.ts';
+import { saveSettings } from './settings-store.ts';
 
-const REASON: Record<string, string> = {
-  'hidden-copy': 'copied text was hidden',
-  'lure-words': 'page said to press Win+R',
-  'fake-captcha': 'fake CAPTCHA',
-  'download-exec': 'download and run',
-  'remote-script-host': 'runs code from the internet',
-  'decoy-comment': 'fake "not a robot" note',
-  'decoy-path': 'fake file path',
-  obfuscated: 'disguised command',
-  'hidden-window': 'runs invisibly',
-  consentfix: 'sign-in code pasted into another site',
-  'from-chat': 'came from a chat',
-  'from-email': 'came from an email',
-  'from-pdf': 'came from a PDF',
-  'from-ai': 'came from a chatbot answer',
-};
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -57,12 +43,6 @@ function renderEvents(events: OwlEvent[]): void {
   }
 }
 
-async function save(patch: Partial<Settings>): Promise<void> {
-  const stored = await chrome.storage.local.get('settings');
-  const settings = (stored.settings as Partial<Settings> | undefined) ?? {};
-  await chrome.storage.local.set({ settings: { ...settings, ...patch } });
-}
-
 async function main(): Promise<void> {
   const state = (await chrome.runtime.sendMessage({ type: 'popup-state' })) as PopupState;
   const status = $('status');
@@ -74,13 +54,13 @@ async function main(): Promise<void> {
   $('agent-hint').hidden = state.agentConnected;
   renderEvents(state.events);
 
-  const locked = new Set(state.locked ?? []);
+  const locked = new Set(state.locked);
   $('locked').hidden = locked.size === 0;
 
   const mode = $<HTMLSelectElement>('mode');
   mode.value = s.mode;
   mode.disabled = locked.has('mode');
-  mode.addEventListener('change', () => void save({ mode: mode.value as Mode }).then(() => location.reload()));
+  mode.addEventListener('change', () => void saveSettings({ mode: mode.value as Mode }).then(() => location.reload()));
 
   // "Trust this site" for the page the popup was opened on.
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -93,19 +73,19 @@ async function main(): Promise<void> {
     trust.disabled = locked.has('trustedSites');
     trust.addEventListener('change', () => {
       const others = s.trustedSites.filter((t) => normalizeSite(t) !== host);
-      void save({ trustedSites: trust.checked ? [...others, host] : others });
+      void saveSettings({ trustedSites: trust.checked ? [...others, host] : others });
     });
   }
 
   const lang = $<HTMLSelectElement>('lang');
   lang.value = s.lang;
   lang.disabled = locked.has('lang');
-  lang.addEventListener('change', () => void save({ lang: lang.value as LangSetting }));
+  lang.addEventListener('change', () => void saveSettings({ lang: lang.value as LangSetting }));
 
   const contact = $<HTMLInputElement>('contact');
   contact.value = s.contact;
   contact.disabled = locked.has('contact');
-  contact.addEventListener('change', () => void save({ contact: contact.value.replace(/[^\d+]/g, '') }));
+  contact.addEventListener('change', () => void saveSettings({ contact: contact.value.replace(/[^\d+]/g, '') }));
 }
 
 void main();

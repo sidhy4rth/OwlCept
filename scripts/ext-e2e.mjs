@@ -7,6 +7,8 @@ import { chromium } from 'playwright';
 import { mkdtempSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { parseReport } from '../packages/engine/src/index.ts';
 
 const ext = new URL('../extension/dist/', import.meta.url).pathname;
 const shots = process.argv.includes('--shots') ? new URL('../docs/assets/', import.meta.url).pathname : null;
@@ -137,6 +139,49 @@ r = await copyOn('https://example-lure.test/');
 const events = await worker.evaluate(async () => (await chrome.storage.local.get('events')).events ?? []);
 check('audit: nothing is shown or replaced, the block is logged', !r.banner && r.clip === BLOCKED && events[0]?.note === 'audit');
 await setSettings({ mode: 'smart' });
+
+// 6. Dashboard: a month of sample activity (fictional .test hosts), then the page itself.
+await worker.evaluate(async () => {
+  const { events = [] } = await chrome.storage.local.get('events');
+  const day = 86_400_000, now = Date.now();
+  const hosts = ['verify-human.example-lure.test', 'cdn-check.example-lure.test', 'docs-mirror.example.test', 'connect.example-lure.test'];
+  const kinds = ['copy-block', 'copy-block', 'copy-warn', 'consentfix'];
+  const ids = [['download-exec', 'hidden-copy', 'lure-words'], ['remote-script-host', 'fake-captcha'], ['persistence'], ['consentfix', 'Microsoft']];
+  const seeded = [];
+  for (let i = 0; i < 26; i++) {
+    const k = (i * 7) % 4;
+    seeded.push({ time: now - ((i * 37) % 29) * day - i * 3_600_000, kind: kinds[k], host: hosts[k], ids: ids[k],
+      hash: k < 2 ? 'b'.repeat(64) : undefined, url: k !== 2 ? `https://${hosts[k]}/verify?id=${i}` : undefined });
+  }
+  seeded.push({ time: now - 2 * day, kind: 'override', host: 'docs-mirror.example.test', ids: ['persistence'] });
+  await chrome.storage.local.set({ events: [...events, ...seeded].sort((a, b) => b.time - a.time), settings: { ...(await chrome.storage.local.get('settings')).settings, deviceLabel: 'Library PC 4', contact: '919800000000' } });
+});
+const stored = await worker.evaluate(async () => (await chrome.storage.local.get('events')).events);
+const dash = await context.newPage();
+await dash.setViewportSize({ width: 1180, height: 900 });
+await dash.goto(`chrome-extension://${extId}/dashboard.html`);
+await dash.waitForFunction(() => document.getElementById('status')?.textContent?.includes('protection'));
+const blocks30 = stored.filter((e) => e.kind === 'copy-block' && e.time > Date.now() - 30 * 86_400_000).length;
+check('dashboard counts match the log', (await dash.textContent('#n-blocked')) === String(blocks30), `${blocks30} blocked`);
+check('dashboard draws the chart and history', (await dash.locator('#chart rect').count()) > 30 && (await dash.locator('#history tr').count()) > 10);
+const reportHref = await dash.evaluate(() => {
+  let opened = '';
+  window.open = (u) => { opened = String(u); return null; };
+  document.querySelector('#history button.small')?.click();
+  return opened;
+});
+check('Report opens Safe Browsing with the lure URL; the list shows it defanged',
+  reportHref.startsWith('https://safebrowsing.google.com/safebrowsing/report_phish/?url=https%3A%2F%2F') && (await dash.textContent('#history')).includes('hxxps://'));
+const [dl] = await Promise.all([dash.waitForEvent('download'), dash.click('#export-json')]);
+const exported = parseReport(readFileSync(await dl.path(), 'utf8'));
+check('JSON export round-trips through the fleet parser', exported.events.length === stored.length && exported.device.label === 'Library PC 4', `${exported.events.length} events`);
+await dash.fill('#trust-input', 'https://Docs.Example.test/guide');
+await dash.click('#trust-form button');
+await dash.waitForTimeout(400);
+check('adding a trusted site from the dashboard normalises it', (await dash.textContent('#trusted')).includes('docs.example.test'));
+await dash.click('#trusted button');
+await dash.waitForTimeout(300);
+if (shots) await dash.screenshot({ path: `${shots}ext-dashboard.png`, fullPage: true });
 
 await context.close();
 const failed = results.filter((r) => !r).length;

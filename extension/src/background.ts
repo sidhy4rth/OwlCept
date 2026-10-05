@@ -3,11 +3,12 @@
 // Native Messaging, and keeps a short local event log for the popup.
 
 import type { CustodyRecord } from '@owlcept/engine';
-import { DEFAULT_SETTINGS, type OwlEvent, type PopupState, type Settings, type StatusReply, type ToBackground, type ToContent } from './messages.ts';
+import { type OwlEvent, type PopupState, type StatusReply, type ToBackground, type ToContent } from './messages.ts';
+import { deviceId, loadSettings } from './settings-store.ts';
 
 const NATIVE_HOST = 'com.owlcept.agent';
 const CUSTODY_TTL_MS = 24 * 60 * 60 * 1000;
-const MAX_EVENTS = 50;
+const MAX_EVENTS = 1000;
 const RECONNECT_ALARM = 'owlcept-agent-reconnect';
 
 let port: chrome.runtime.Port | null = null;
@@ -60,11 +61,6 @@ async function logEvent(e: OwlEvent): Promise<void> {
   await chrome.storage.local.set({ events: events.slice(0, MAX_EVENTS) });
 }
 
-async function getSettings(): Promise<Settings> {
-  const { settings } = (await chrome.storage.local.get('settings')) as { settings?: Partial<Settings> };
-  return { ...DEFAULT_SETTINGS, ...settings };
-}
-
 const hostOf = (url?: string): string => {
   try {
     return url ? new URL(url).hostname : '';
@@ -79,12 +75,12 @@ chrome.runtime.onMessage.addListener((msg: ToBackground, sender, reply) => {
   const tabId = sender.tab?.id;
   switch (msg?.type) {
     case 'status':
-      void getSettings().then((settings) => reply({ agentConnected, settings } satisfies StatusReply));
+      void loadSettings().then(({ settings, locked }) => reply({ agentConnected, settings, locked } satisfies StatusReply));
       return true;
     case 'popup-state':
-      void Promise.all([getSettings(), chrome.storage.local.get('events')]).then(([settings, stored]) => {
+      void Promise.all([loadSettings(), chrome.storage.local.get('events'), deviceId()]).then(([{ settings, locked }, stored, id]) => {
         const events = (stored.events as OwlEvent[] | undefined) ?? [];
-        reply({ agentConnected, settings, events } satisfies PopupState);
+        reply({ agentConnected, settings, locked, events, deviceId: id, version: chrome.runtime.getManifest().version } satisfies PopupState);
       });
       return true;
     case 'custody': {
@@ -97,6 +93,7 @@ chrome.runtime.onMessage.addListener((msg: ToBackground, sender, reply) => {
           ids: msg.ids,
           hash: msg.record.hash,
           note: msg.note,
+          url: msg.action === 'block' ? msg.record.originUrl : undefined,
         });
         if (msg.shown && msg.action === 'block' && tabId !== undefined) {
           void chrome.action.setBadgeBackgroundColor({ tabId, color: '#DC2626' });
@@ -106,7 +103,7 @@ chrome.runtime.onMessage.addListener((msg: ToBackground, sender, reply) => {
       return false;
     }
     case 'consentfix':
-      void logEvent({ time: Date.now(), kind: 'consentfix', host: msg.host, ids: ['consentfix', msg.provider], note: msg.note });
+      void logEvent({ time: Date.now(), kind: 'consentfix', host: msg.host, ids: ['consentfix', msg.provider], note: msg.note, url: msg.url });
       if (!msg.note && tabId !== undefined) void chrome.action.setBadgeText({ tabId, text: '!' });
       return false;
     case 'override':
