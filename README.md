@@ -27,7 +27,7 @@
 
 ![Zero runtime dependencies](https://img.shields.io/badge/engine-zero_dependencies-0F172A)
 ![Offline](https://img.shields.io/badge/clipboard_text-never_leaves_the_device-15803D)
-![Languages](https://img.shields.io/badge/warnings-English_·_हिन्दी_·_ಕನ್ನಡ-B91C1C)
+![Languages](https://img.shields.io/badge/warnings-English_·_Hindi_·_Kannada-B91C1C)
 
 [**Download**](https://github.com/sidhy4rth/OwlCept/releases/latest) ·
 [**How it works**](#how-it-works) ·
