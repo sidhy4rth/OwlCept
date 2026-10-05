@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OwlCept</string>
+    <string name="share_label">Check with OwlCept</string>
+    <string name="process_text_label">Check with OwlCept</string>
+    <string name="tile_label">Check clipboard</string>
+    <string name="check_clipboard">Check copied text</string>
+    <string name="nothing_copied">Nothing copied yet. Copy the message first.</string>
+</resources>

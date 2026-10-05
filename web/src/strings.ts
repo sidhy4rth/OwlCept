@@ -25,6 +25,7 @@ export interface PageStrings {
   contacts: string;
   hidden: string;
   privacy: string;
+  privacyApp: string;
 }
 
 export const STRINGS: Record<Lang, PageStrings> = {
@@ -50,6 +51,7 @@ export const STRINGS: Record<Lang, PageStrings> = {
     contacts: 'Websites it contacts',
     hidden: 'What it really says (decoded)',
     privacy: 'Runs entirely in your browser. Nothing you paste is uploaded: this page is not allowed to connect to the internet.',
+    privacyApp: 'Runs entirely on your phone. Nothing you check is uploaded: this app has no permission to use the internet.',
   },
   hi: {
     title: 'OwlCept जाँच',
@@ -73,6 +75,7 @@ export const STRINGS: Record<Lang, PageStrings> = {
     contacts: 'यह किन वेबसाइटों से जुड़ता है',
     hidden: 'असल में यह क्या कहता है (डिकोड किया हुआ)',
     privacy: 'यह पूरी तरह आपके ब्राउज़र में चलता है। आप जो पेस्ट करते हैं वह कहीं अपलोड नहीं होता: इस पेज को इंटरनेट से जुड़ने की अनुमति ही नहीं है।',
+    privacyApp: 'यह पूरी तरह आपके फ़ोन पर चलता है। आप जो जाँचते हैं वह कहीं अपलोड नहीं होता: इस ऐप को इंटरनेट इस्तेमाल करने की अनुमति ही नहीं है।',
   },
   kn: {
     title: 'OwlCept ಪರಿಶೀಲನೆ',
@@ -96,5 +99,6 @@ export const STRINGS: Record<Lang, PageStrings> = {
     contacts: 'ಇದು ಸಂಪರ್ಕಿಸುವ ವೆಬ್‌ಸೈಟ್‌ಗಳು',
     hidden: 'ಇದು ನಿಜವಾಗಿ ಏನು ಹೇಳುತ್ತದೆ (ಡಿಕೋಡ್ ಮಾಡಿದ್ದು)',
     privacy: 'ಇದು ಸಂಪೂರ್ಣವಾಗಿ ನಿಮ್ಮ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಚಲಿಸುತ್ತದೆ. ನೀವು ಅಂಟಿಸಿದ್ದು ಎಲ್ಲಿಗೂ ಅಪ್‌ಲೋಡ್ ಆಗುವುದಿಲ್ಲ: ಈ ಪುಟಕ್ಕೆ ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕಕ್ಕೆ ಅನುಮತಿಯೇ ಇಲ್ಲ.',
+    privacyApp: 'ಇದು ಸಂಪೂರ್ಣವಾಗಿ ನಿಮ್ಮ ಫೋನ್‌ನಲ್ಲಿ ಚಲಿಸುತ್ತದೆ. ನೀವು ಪರಿಶೀಲಿಸಿದ್ದು ಎಲ್ಲಿಗೂ ಅಪ್‌ಲೋಡ್ ಆಗುವುದಿಲ್ಲ: ಈ ಆ್ಯಪ್‌ಗೆ ಇಂಟರ್ನೆಟ್ ಬಳಸಲು ಅನುಮತಿಯೇ ಇಲ್ಲ.',
   },
 };

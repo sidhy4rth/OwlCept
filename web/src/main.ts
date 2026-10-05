@@ -18,6 +18,8 @@ const lureEl = $<HTMLInputElement>('#lure');
 const resultEl = $<HTMLElement>('#result');
 
 let lang: Lang = initialLang();
+/** The Android app loads the page with ?app=android. */
+const inApp = new URLSearchParams(location.search).get('app') === 'android';
 
 function initialLang(): Lang {
   try {
@@ -39,7 +41,10 @@ function setLang(next: Lang): void {
   }
   document.documentElement.lang = next;
   const s = STRINGS[next];
-  for (const el of document.querySelectorAll<HTMLElement>('[data-t]')) el.textContent = s[el.dataset.t as keyof PageStrings];
+  for (const el of document.querySelectorAll<HTMLElement>('[data-t]')) {
+    const key = (inApp && el.dataset.t === 'privacy' ? 'privacyApp' : el.dataset.t) as keyof PageStrings;
+    el.textContent = s[key];
+  }
   for (const el of document.querySelectorAll<HTMLElement>('[data-t-placeholder]')) {
     el.setAttribute('placeholder', s[el.dataset.tPlaceholder as keyof PageStrings]);
   }
@@ -142,7 +147,7 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('[data-example]')) 
   textEl.value = text;
   if (target) targetEl.value = target;
   render();
-  textEl.scrollIntoView({ block: 'start' });
+  resultEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
 };
 
 setLang(lang);
