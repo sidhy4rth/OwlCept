@@ -1,0 +1,19 @@
+{
+  "name": "@owlcept/engine",
+  "version": "0.1.0",
+  "description": "Command-risk and plain-language explanation engine for OwlCept.",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test 'test/**/*.test.ts'",
+    "typecheck": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "^5.9.3"
+  }
+}

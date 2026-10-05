@@ -1,0 +1,10 @@
+{
+  "name": "owlcept",
+  "private": true,
+  "description": "OwlCept stops ClickFix-style paste-and-run attacks at copy, paste and Enter.",
+  "license": "MIT",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "test": "npm test -w @owlcept/engine"
+  }
+}
