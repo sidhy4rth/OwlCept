@@ -2,21 +2,9 @@
 // see what will actually execute. Everything here is static text rewriting:
 // nothing is ever evaluated.
 
-export type Trick =
-  | 'invisible-chars'
-  | 'caret-escapes'
-  | 'backtick-escapes'
-  | 'quote-splitting'
-  | 'string-splitting'
-  | 'format-reorder'
-  | 'string-replace'
-  | 'char-codes'
-  | 'env-slicing'
-  | 'variable-indirection'
-  | 'base64'
-  | 'hex'
-  | 'url-encoding'
-  | 'padding';
+import type { Trick } from './types.ts';
+
+export type { Trick };
 
 export interface Decoded {
   /** layers[0] is the simplified input; later entries are decoded payloads. */
@@ -26,6 +14,17 @@ export interface Decoded {
   comments: string[];
   /** True when the time budget ran out with decoding work left undone. */
   incomplete: boolean;
+  /** How each layer was reached, parallel to `layers`. */
+  steps: DecodeStep[];
+}
+
+export interface DecodeStep {
+  /** Index of the layer this one was decoded from; null for the input itself. */
+  from: number | null;
+  /** The decoder that produced this layer from its parent (base64, hex, url-encoding). */
+  decodedBy: Trick | null;
+  /** Disguises undone while simplifying this layer, in the order found. */
+  undid: Trick[];
 }
 
 const ZERO_WIDTH = /[\u200B-\u200D\u2060\u180E\uFEFF]/g;
@@ -57,24 +56,28 @@ const clock = (): number => (typeof performance !== 'undefined' ? performance.no
 
 /** `deadline` is a clock() time; work still left when it passes is skipped and reported as incomplete. */
 export function deobfuscate(input: string, deadline = Infinity): Decoded {
-  const out: Decoded = { layers: [], tricks: new Set(), comments: [], incomplete: false };
+  const out: Decoded = { layers: [], tricks: new Set(), comments: [], incomplete: false, steps: [] };
   const seen = new Set<string>();
-  walk(input, 0, out, seen, deadline);
+  walk(input, 0, out, seen, deadline, null, null);
   return out;
 }
 
-function walk(raw: string, depth: number, out: Decoded, seen: Set<string>, deadline: number): void {
-  const text = simplify(normalise(raw, out.tricks), out, deadline);
+function walk(raw: string, depth: number, out: Decoded, seen: Set<string>, deadline: number, from: number | null, decodedBy: Trick | null): void {
+  // Tricks are collected per layer for the trace, then merged into the overall set.
+  const undid = new Set<Trick>();
+  const text = simplify(normalise(raw, undid), out, deadline, undid);
+  for (const t of undid) out.tricks.add(t);
   if (seen.has(text)) return;
   seen.add(text);
-  out.layers.push(text);
+  const index = out.layers.push(text) - 1;
+  out.steps.push({ from, decodedBy, undid: [...undid] });
   if (depth >= MAX_DEPTH) return;
   for (const inner of decodeBlobs(text, out.tricks)) {
     if (clock() > deadline) {
       out.incomplete = true;
       return;
     }
-    walk(inner, depth + 1, out, seen, deadline);
+    walk(inner.text, depth + 1, out, seen, deadline, index, inner.trick);
   }
 }
 
@@ -92,9 +95,8 @@ function normalise(s: string, tricks: Set<Trick>): string {
 
 // ---------------------------------------------------------------- simplify
 
-function simplify(s: string, out: Decoded, deadline: number): string {
-  const t = out.tricks;
-  s = splitComment(s, out);
+function simplify(s: string, out: Decoded, deadline: number, t: Set<Trick>): string {
+  s = splitComment(s, out, t);
   for (let pass = 0; pass < MAX_PASSES; pass++) {
     if (pass > 0 && clock() > deadline) {
       out.incomplete = true;
@@ -114,8 +116,8 @@ function simplify(s: string, out: Decoded, deadline: number): string {
 }
 
 /** Splits a trailing decoy comment off the command and records padding. */
-function splitComment(s: string, out: Decoded): string {
-  if (/[ \t]{25,}/.test(s)) out.tricks.add('padding');
+function splitComment(s: string, out: Decoded, t: Set<Trick>): string {
+  if (/[ \t]{25,}/.test(s)) t.add('padding');
   let quote: string | null = null;
   for (let i = 0; i < s.length; i++) {
     const c = s[i];
@@ -369,11 +371,11 @@ function decodeBase64Text(b64: string): string | null {
   return printableRatio(text) >= 0.9 && /[a-z]{3}/i.test(text) ? text : null;
 }
 
-function decodeBlobs(s: string, t: Set<Trick>): string[] {
-  const found: string[] = [];
+function decodeBlobs(s: string, t: Set<Trick>): { text: string; trick: Trick }[] {
+  const found: { text: string; trick: Trick }[] = [];
   const push = (v: string | null, trick: Trick) => {
-    if (v && v.trim() && !found.includes(v)) {
-      found.push(v);
+    if (v && v.trim() && !found.some((f) => f.text === v)) {
+      found.push({ text: v, trick });
       t.add(trick);
     }
   };

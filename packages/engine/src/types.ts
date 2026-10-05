@@ -61,12 +61,42 @@ export interface Verdict {
   layers: string[];
   /** Hosts the command talks to, after decoding. */
   hosts: string[];
+  /** How each layer was reached: the decode path, step by step (parallel to `layers`). */
+  trace: TraceStep[];
   target: PasteTarget;
   /** Engine time in milliseconds. */
   ms: number;
 }
 
 export type Lang = 'en' | 'hi' | 'kn';
+
+/** A disguise the deobfuscator can undo. */
+export type Trick =
+  | 'invisible-chars'
+  | 'caret-escapes'
+  | 'backtick-escapes'
+  | 'quote-splitting'
+  | 'string-splitting'
+  | 'format-reorder'
+  | 'string-replace'
+  | 'char-codes'
+  | 'env-slicing'
+  | 'variable-indirection'
+  | 'base64'
+  | 'hex'
+  | 'url-encoding'
+  | 'padding';
+
+export interface TraceStep {
+  /** The text at this step, after simplification. */
+  text: string;
+  /** Step it was decoded from; null for what was pasted. */
+  from: number | null;
+  /** Decoder that produced it from that step. */
+  decodedBy: Trick | null;
+  /** Disguises undone within this step. */
+  undid: Trick[];
+}
 
 export interface Explanation {
   lang: Lang;

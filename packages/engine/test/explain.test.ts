@@ -16,7 +16,7 @@ const IDS = [
 ];
 
 const verdictWith = (f: Finding, action: Verdict['action'] = 'warn'): Verdict => ({
-  action, risk: 50, findings: [f], layers: [], hosts: [], target: 'unknown', ms: 0,
+  action, risk: 50, findings: [f], layers: [], hosts: [], trace: [], target: 'unknown', ms: 0,
 });
 
 test('every finding has a sentence in every language, with no leftover placeholders', () => {

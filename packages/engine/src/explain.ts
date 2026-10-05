@@ -2,7 +2,7 @@
 // clipboard text off the device, and the warning must work offline.
 // Hindi and Kannada strings should be reviewed by native speakers before release.
 
-import type { Explanation, Finding, Lang, Verdict } from './types.ts';
+import type { Explanation, Finding, Lang, Trick, Verdict } from './types.ts';
 import { classifySource } from './source.ts';
 import type { CustodyRecord } from './types.ts';
 
@@ -230,4 +230,60 @@ export function explain(verdict: Verdict, custody: CustodyRecord | null | undefi
 /** Behaviour first (what it does), then context (why we think it is a trick). */
 function order(f: Finding): number {
   return f.kind === 'behaviour' ? 0 : f.kind === 'obfuscation' ? 1 : 2;
+}
+
+// One line per disguise, for the step-by-step "how it was read" view.
+const TRICKS: Record<Lang, Record<Trick, string>> = {
+  en: {
+    'invisible-chars': 'removed invisible characters',
+    'caret-escapes': 'removed ^ escape marks',
+    'backtick-escapes': 'removed ` escape marks',
+    'quote-splitting': 'removed quote marks splitting words',
+    'string-splitting': 'joined text split into pieces',
+    'format-reorder': 'put reordered pieces back in order',
+    'string-replace': 'applied text replacements',
+    'char-codes': 'turned character codes back into letters',
+    'env-slicing': 'resolved letters cut out of system settings',
+    'variable-indirection': 'filled in values hidden in variables',
+    base64: 'decoded Base64',
+    hex: 'decoded hexadecimal',
+    'url-encoding': 'decoded %-encoding',
+    padding: 'removed long blank padding',
+  },
+  hi: {
+    'invisible-chars': 'अदृश्य अक्षर हटाए',
+    'caret-escapes': '^ चिह्न हटाए',
+    'backtick-escapes': '` चिह्न हटाए',
+    'quote-splitting': 'शब्दों को तोड़ने वाले उद्धरण चिह्न हटाए',
+    'string-splitting': 'टुकड़ों में बँटे टेक्स्ट को जोड़ा',
+    'format-reorder': 'उलटे-पुलटे टुकड़ों को सही क्रम में रखा',
+    'string-replace': 'टेक्स्ट में किए गए बदलाव लागू किए',
+    'char-codes': 'अक्षर कोड को फिर से अक्षरों में बदला',
+    'env-slicing': 'सिस्टम सेटिंग से काटे गए अक्षर पहचाने',
+    'variable-indirection': 'वेरिएबल में छिपे मान भरे',
+    base64: 'Base64 डिकोड किया',
+    hex: 'हेक्साडेसिमल डिकोड किया',
+    'url-encoding': '%-एन्कोडिंग डिकोड की',
+    padding: 'लंबी खाली जगह हटाई',
+  },
+  kn: {
+    'invisible-chars': 'ಅದೃಶ್ಯ ಅಕ್ಷರಗಳನ್ನು ತೆಗೆದುಹಾಕಲಾಗಿದೆ',
+    'caret-escapes': '^ ಗುರುತುಗಳನ್ನು ತೆಗೆದುಹಾಕಲಾಗಿದೆ',
+    'backtick-escapes': '` ಗುರುತುಗಳನ್ನು ತೆಗೆದುಹಾಕಲಾಗಿದೆ',
+    'quote-splitting': 'ಪದಗಳನ್ನು ಒಡೆಯುವ ಉದ್ಧರಣ ಚಿಹ್ನೆಗಳನ್ನು ತೆಗೆದುಹಾಕಲಾಗಿದೆ',
+    'string-splitting': 'ತುಂಡುಗಳಾಗಿ ಒಡೆದ ಪಠ್ಯವನ್ನು ಜೋಡಿಸಲಾಗಿದೆ',
+    'format-reorder': 'ಕ್ರಮ ತಪ್ಪಿದ ತುಂಡುಗಳನ್ನು ಸರಿಯಾದ ಕ್ರಮಕ್ಕೆ ತರಲಾಗಿದೆ',
+    'string-replace': 'ಪಠ್ಯ ಬದಲಾವಣೆಗಳನ್ನು ಅನ್ವಯಿಸಲಾಗಿದೆ',
+    'char-codes': 'ಅಕ್ಷರ ಸಂಕೇತಗಳನ್ನು ಮತ್ತೆ ಅಕ್ಷರಗಳಾಗಿ ಬದಲಾಯಿಸಲಾಗಿದೆ',
+    'env-slicing': 'ಸಿಸ್ಟಮ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳಿಂದ ಕತ್ತರಿಸಿದ ಅಕ್ಷರಗಳನ್ನು ಗುರುತಿಸಲಾಗಿದೆ',
+    'variable-indirection': 'ವೇರಿಯೇಬಲ್‌ಗಳಲ್ಲಿ ಅಡಗಿಸಿದ ಮೌಲ್ಯಗಳನ್ನು ತುಂಬಲಾಗಿದೆ',
+    base64: 'Base64 ಡಿಕೋಡ್ ಮಾಡಲಾಗಿದೆ',
+    hex: 'ಹೆಕ್ಸಾಡೆಸಿಮಲ್ ಡಿಕೋಡ್ ಮಾಡಲಾಗಿದೆ',
+    'url-encoding': '%-ಎನ್‌ಕೋಡಿಂಗ್ ಡಿಕೋಡ್ ಮಾಡಲಾಗಿದೆ',
+    padding: 'ಉದ್ದವಾದ ಖಾಲಿ ಜಾಗವನ್ನು ತೆಗೆದುಹಾಕಲಾಗಿದೆ',
+  },
+};
+
+export function describeTrick(trick: Trick, lang: Lang = 'en'): string {
+  return TRICKS[lang][trick];
 }

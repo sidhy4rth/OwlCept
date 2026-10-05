@@ -7,7 +7,7 @@ import { score, WARN_AT } from './score.ts';
 import type { AnalyzeContext, Verdict } from './types.ts';
 
 export type * from './types.ts';
-export { explain } from './explain.ts';
+export { describeTrick, explain } from './explain.ts';
 export { detectLureText, isRealCaptchaSource } from './lure.ts';
 export { checkOAuthPaste, detectOAuthCode, explainConsentFix } from './oauth.ts';
 export { BLOCK_AT, WARN_AT } from './score.ts';
@@ -48,6 +48,7 @@ export function analyze(text: string, ctx: AnalyzeContext = {}): Verdict {
     findings: [...findings, ...context],
     layers: decoded.layers,
     hosts: [...new Set(hosts.map((h) => h.host))],
+    trace: decoded.layers.map((text, i) => ({ text, ...decoded.steps[i] })),
     target: ctx.target ?? 'unknown',
     ms: Math.round((now() - started) * 100) / 100,
   };

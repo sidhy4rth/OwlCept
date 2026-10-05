@@ -122,7 +122,7 @@ const explainFailures: string[] = [];
 let explained = 0;
 for (const id of findingIds) {
   const verdict: Verdict = {
-    action: 'block', risk: 90, target: 'run', layers: [], hosts: [], ms: 0,
+    action: 'block', risk: 90, target: 'run', layers: [], hosts: [], trace: [], ms: 0,
     findings: [{ id, kind: 'behaviour', weight: 50, severity: 'high', params: PARAMS }],
   };
   for (const lang of LANGS) {

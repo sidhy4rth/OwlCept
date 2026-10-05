@@ -52,3 +52,11 @@ test('usage errors exit 64', () => {
   assert.equal(run(['frobnicate']).status, 64);
   assert.equal(run(['--version']).stdout.trim(), '0.2.0');
 });
+
+test('check --trace prints every decoding step', () => {
+  const m = Buffer.from('c^m^d /c e^c^h^o SIMULATED-CLICKFIX', 'utf16le').toString('base64');
+  const out = run(['check', `powershell -enc ${m}`, '--trace']).stdout;
+  assert.match(out, /1\. what was pasted/);
+  assert.match(out, /2\. decoded Base64 \(from step 1\) · removed \^ escape marks/);
+  assert.match(out, /cmd \/c echo SIMULATED-CLICKFIX/);
+});

@@ -11,7 +11,7 @@
 // Exit codes for check and oauth: 0 allow, 1 warn, 2 block, 64 usage error.
 
 import { createInterface } from 'node:readline';
-import { analyze, checkOAuthPaste, explain, explainConsentFix } from '../src/index.ts';
+import { analyze, checkOAuthPaste, describeTrick, explain, explainConsentFix } from '../src/index.ts';
 import type { AnalyzeContext, CustodyRecord, Lang, PasteTarget, Verdict } from '../src/types.ts';
 
 const VERSION = '0.2.0';
@@ -35,6 +35,7 @@ check options
   --scripted                              a page script wrote the clipboard
   --hidden                                the copied text was not visible on the page
   --fake-captcha                          a CAPTCHA not served by a real provider was on the page
+  --trace                                 show how the command was decoded, step by step
   --json                                  print the verdict and explanation as JSON
 
 exit status: 0 allow, 1 warn, 2 block, 64 usage error`;
@@ -52,7 +53,7 @@ function parse(argv: string[]): { cmd: string; args: string[]; flags: Flags } {
       continue;
     }
     const key = a.slice(2);
-    if (['json', 'scripted', 'hidden', 'fake-captcha'].includes(key)) flags[key] = true;
+    if (['json', 'scripted', 'hidden', 'fake-captcha', 'trace'].includes(key)) flags[key] = true;
     else {
       const v = rest[++i];
       if (v === undefined) usage(`--${key} needs a value`);
@@ -100,14 +101,21 @@ const COLOR = process.stdout.isTTY && !process.env.NO_COLOR;
 const paint = (code: string, s: string) => (COLOR ? `\x1b[${code}m${s}\x1b[0m` : s);
 const tone = { allow: '32', warn: '33', block: '31' } as const;
 
-function printHuman(v: Verdict, lang: Lang, custody: CustodyRecord | null | undefined): void {
+function printHuman(v: Verdict, lang: Lang, custody: CustodyRecord | null | undefined, trace = false): void {
   const e = explain(v, custody, lang);
   const out = [paint(`1;${tone[v.action]}`, `${v.action.toUpperCase()} ${v.risk}/100  ${e.headline}`)];
   for (const d of e.details) out.push(`  • ${d}`);
   if (e.provenance) out.push(`  ${e.provenance}`);
   if (v.action !== 'allow') out.push(`  ${e.advice}`);
   if (v.hosts.length) out.push(paint('2', `  hosts: ${v.hosts.join(', ')}`));
-  if (v.layers.length > 1) out.push(paint('2', `  decoded: ${v.layers.at(-1)!.slice(0, 200)}`));
+  if (trace) {
+    out.push(paint('1', '  how it was read:'));
+    v.trace.forEach((step, i) => {
+      const how = step.from === null ? 'what was pasted' : `${describeTrick(step.decodedBy!, lang)} (from step ${step.from + 1})`;
+      out.push(`  ${i + 1}. ${how}${step.undid.length ? paint('2', ` · ${step.undid.map((t) => describeTrick(t, lang)).join(', ')}`) : ''}`);
+      out.push(paint('2', `     ${step.text.slice(0, 300).replace(/\n/g, '\n     ')}`));
+    });
+  } else if (v.layers.length > 1) out.push(paint('2', `  decoded: ${v.layers.at(-1)!.slice(0, 200)}`));
   out.push(paint('2', `  findings: ${v.findings.map((f) => `${f.id}(${f.weight > 0 ? '+' : ''}${f.weight})`).join(' ') || 'none'} · ${v.ms} ms`));
   process.stdout.write(`${out.join('\n')}\n`);
 }
@@ -146,7 +154,7 @@ async function main(): Promise<void> {
     const { ctx, lang } = contextFrom(flags);
     const v = analyze(text, ctx);
     if (flags.json) process.stdout.write(`${JSON.stringify({ verdict: v, explanation: explain(v, ctx.custody, lang) }, null, 2)}\n`);
-    else printHuman(v, lang, ctx.custody);
+    else printHuman(v, lang, ctx.custody, !!flags.trace);
     process.exit(EXIT[v.action]);
   }
   if (cmd === 'oauth') {

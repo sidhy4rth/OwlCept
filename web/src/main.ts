@@ -1,9 +1,9 @@
 // OwlCept Check: paste a command, see what it would really do. Everything
 // runs here in the page; the Content-Security-Policy forbids network access.
 
-import { analyze, detectOAuthCode, explain, explainConsentFix } from '@owlcept/engine';
+import { analyze, describeTrick, detectOAuthCode, explain, explainConsentFix } from '@owlcept/engine';
 import type { AnalyzeContext, Lang, PasteTarget } from '@owlcept/engine';
-import { STRINGS, type PageStrings } from './strings.ts';
+import { STRINGS, fill as template, type PageStrings } from './strings.ts';
 
 const EXAMPLES: Record<string, string> = {
   installer: 'irm get.scoop.sh | iex',
@@ -115,12 +115,28 @@ function render(): void {
     box.append(d);
   }
 
-  const hidden = verdict.layers.slice(1);
-  if (hidden.length) {
-    const d = el('details') as HTMLDetailsElement;
-    d.open = true;
-    d.append(el('summary', '', s.hidden));
-    for (const layer of hidden) d.append(el('pre', '', layer));
+  // Step by step: what was pasted, which disguises came off, what each decoded layer says.
+  const trace = verdict.trace;
+  if (trace.length > 1 || trace[0]?.undid.length) {
+    const d = el('details', 'trace') as HTMLDetailsElement;
+    d.open = verdict.action !== 'allow';
+    d.append(el('summary', '', s.howRead));
+    const ol = el('ol', 'steps');
+    trace.forEach((step, i) => {
+      const li = el('li');
+      const head = el('div', 'step-head');
+      head.append(el('b', '', step.from === null ? s.pasted : describeTrick(step.decodedBy!, lang)));
+      if (step.from !== null) head.append(el('span', 'from', template(s.fromStep, { n: String(step.from + 1) })));
+      li.append(head);
+      if (step.undid.length) {
+        const chips = el('div', 'chips');
+        for (const t of step.undid) chips.append(el('span', 'chip undid', describeTrick(t, lang)));
+        li.append(chips);
+      }
+      if (i > 0 || step.undid.length) li.append(el('pre', '', step.text));
+      ol.append(li);
+    });
+    d.append(ol);
     box.append(d);
   }
 

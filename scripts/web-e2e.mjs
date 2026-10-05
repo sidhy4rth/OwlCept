@@ -35,6 +35,19 @@ await page.route('https://owlcept.test/**', (route) => {
 await page.goto('https://owlcept.test/');
 check('OwlCept Check loads', (await page.title()) === 'OwlCept Check');
 
+// The step-by-step trace, on the brief's harmless marker wrapped in caret escapes and Base64.
+const marker = Buffer.from('c^m^d /c e^c^h^o SIMULATED-CLICKFIX', 'utf16le').toString('base64');
+await page.fill('textarea', `powershell -enc ${marker}`);
+await page.waitForSelector('ol.steps li:nth-child(2)', { state: 'attached' });
+await page.evaluate(() => { const d = document.querySelector('details.trace'); if (d) d.open = true; });
+const steps = await page.locator('ol.steps > li').allTextContents();
+check('trace: the decoded layer names its decoder and parent step', steps.length >= 2 && /decoded Base64/.test(steps[1]) && /from step 1/.test(steps[1]), steps.map((x) => x.slice(0, 40)).join(' | '));
+check('trace: disguises inside a decoded layer are listed', /removed \^ escape marks/.test(steps.join(' ')));
+if (shots) await page.locator('#result').screenshot({ path: `${shots}web-trace.png` });
+await page.click('[data-lang="hi"]');
+check('trace: step labels follow the page language', /Base64 डिकोड किया/.test(await page.textContent('ol.steps')));
+await page.click('[data-lang="en"]');
+
 await page.goto('https://owlcept.test/fleet.html');
 await page.click('#sample');
 await page.waitForSelector('#report:not([hidden])');
