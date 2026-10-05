@@ -25,10 +25,14 @@ const POLICY = {
   },
 };
 
+// Linux policy folders: Chromium, Google Chrome, and Chrome for Testing (what Playwright ships).
+const POLICY_DIRS = ['/etc/chromium/policies/managed', '/etc/opt/chrome/policies/managed', '/etc/opt/chrome_for_testing/policies/managed'];
 if (process.argv.includes('--write-policy')) {
-  mkdirSync('/etc/chromium/policies/managed', { recursive: true });
-  writeFileSync('/etc/chromium/policies/managed/owlcept.json', JSON.stringify(POLICY, null, 2));
-  console.log('policy written to /etc/chromium/policies/managed/owlcept.json');
+  for (const dir of POLICY_DIRS) {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(`${dir}/owlcept.json`, JSON.stringify(POLICY, null, 2));
+    console.log(`policy written to ${dir}/owlcept.json`);
+  }
   process.exit(0);
 }
 
@@ -54,6 +58,15 @@ worker ??= await context.waitForEvent('serviceworker');
 
 const managed = await worker.evaluate(() => chrome.storage.managed.get(null));
 check('Chromium hands the policy to the extension', managed.deviceLabel === 'Policy Lab PC', JSON.stringify(managed).slice(0, 80));
+if (managed.deviceLabel !== 'Policy Lab PC') {
+  // Show what the browser itself loaded, so a path or format problem is visible in the log.
+  const diag = await context.newPage();
+  await diag.goto('chrome://policy');
+  await diag.waitForTimeout(1500);
+  console.log('chrome://policy says:', (await diag.textContent('body')).replace(/\s+/g, ' ').slice(0, 1500));
+  await diag.goto('chrome://version');
+  console.log('chrome://version:', (await diag.textContent('body')).replace(/\s+/g, ' ').slice(0, 600));
+}
 
 // The user (or anything with storage access) cannot override organisation-only rules.
 await worker.evaluate(() => chrome.storage.local.set({ settings: { blockedHosts: [], approvedCommands: [], lang: 'en' } }));
