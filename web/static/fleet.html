@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="description" content="Merge OwlCept activity exports from many PCs and see what was stopped across a lab or office. Runs entirely in your browser.">
+<title>OwlCept fleet view</title>
+<link rel="icon" href="owl.svg" type="image/svg+xml">
+<style>
+  :root { --bg: #F7F7FB; --card: #fff; --ink: #111827; --muted: #5B6475; --line: #E3E5EE; --brand: #312E81; --chip: #F1F2F8;
+    --red: #C81E1E; --amber: #B45309; --indigo: #4338CA; --slate: #475569; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0B0F1A; --card: #121829; --ink: #E7EAF3; --muted: #9AA3B8; --line: #232B40; --brand: #A5B4FC; --chip: #0F1424;
+    --red: #F87171; --amber: #FBBF24; --indigo: #A5B4FC; --slate: #CBD5E1; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 "Segoe UI", "Nirmala UI", system-ui, -apple-system, sans-serif; }
+  main { max-width: 1120px; margin: 0 auto; padding: 22px 16px 40px; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  header img { width: 42px; height: 42px; } header h1 { font-size: 22px; margin: 0; } header p { margin: 0; color: var(--muted); font-size: 14px; }
+  .range { margin-left: auto; display: flex; background: var(--chip); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+  .range button { border: 0; background: none; color: var(--muted); padding: 5px 13px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; }
+  .range button.on { background: var(--brand); color: var(--card); font-weight: 600; }
+  .drop { margin: 18px 0; border: 2px dashed var(--line); border-radius: 14px; padding: 22px; text-align: center; background: var(--card); }
+  .drop.over { border-color: var(--indigo); }
+  .drop p { margin: 6px 0; color: var(--muted); font-size: 14px; }
+  .drop .big { color: var(--ink); font-size: 16px; font-weight: 600; }
+  button { font: inherit; font-size: 14px; border-radius: 8px; padding: 8px 14px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+  button.primary { background: var(--brand); border-color: var(--brand); color: var(--card); font-weight: 600; }
+  button.link { border: 0; background: none; color: var(--muted); text-decoration: underline; padding: 8px 4px; }
+  .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+  #files { list-style: none; padding: 0; margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+  #files li.err { color: var(--red); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; border-top: 4px solid var(--slate); }
+  .card b { display: block; font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; } .card span { color: var(--muted); font-size: 13px; }
+  .card.red { border-top-color: var(--red); } .card.red b { color: var(--red); } .card.amber { border-top-color: var(--amber); } .card.amber b { color: var(--amber); }
+  .card.indigo { border-top-color: var(--indigo); } .card.indigo b { color: var(--indigo); }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; min-width: 0; }
+  .panel h2 { font-size: 15px; margin: 0 0 8px; } .muted { color: var(--muted); font-size: 13.5px; margin: 0 0 10px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; } @media (max-width: 780px) { .two { grid-template-columns: 1fr; } }
+  .chart { height: 140px; } .chart svg { width: 100%; height: 100%; display: block; }
+  .callout { border-left: 4px solid var(--amber); background: var(--chip); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; font-size: 14px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th.num { text-align: right; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; } td.hot { color: var(--red); font-weight: 600; } td.overr { color: var(--amber); font-weight: 600; }
+  td.mono, .mono { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; overflow-wrap: anywhere; }
+  .tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--chip); }
+  .tag.audit { color: var(--amber); } .tag.strict { color: var(--indigo); }
+  footer { color: var(--muted); font-size: 13px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="owl.svg" alt="">
+    <div><h1>OwlCept fleet view</h1><p>Everything OwlCept stopped across your PCs. The files are read in this browser and never uploaded.</p></div>
+    <nav class="range" aria-label="Time range"><button data-days="7">7 days</button><button data-days="30" class="on">30 days</button><button data-days="90">90 days</button></nav>
+  </header>
+
+  <section class="drop" id="drop">
+    <p class="big">Drop OwlCept exports here</p>
+    <p>On each PC: OwlCept → Open activity dashboard → <b>Export for fleet view</b>. Drop any number of the .json files at once.</p>
+    <div class="actions">
+      <button class="primary" id="pick">Choose files</button>
+      <button id="sample">Try with sample data</button>
+      <button class="link" id="reset" hidden>Clear</button>
+    </div>
+    <input type="file" id="file" accept=".json,application/json" multiple hidden>
+    <ul id="files"></ul>
+  </section>
+
+  <div id="report" hidden>
+    <section class="cards">
+      <div class="card"><b id="n-devices">0</b><span>devices</span></div>
+      <div class="card red"><b id="n-blocked">0</b><span>commands blocked</span></div>
+      <div class="card amber"><b id="n-warned">0</b><span>warnings</span></div>
+      <div class="card indigo"><b id="n-consentfix">0</b><span>sign-in codes stopped</span></div>
+      <div class="card"><b id="n-overrides">0</b><span>copied anyway</span></div>
+    </section>
+    <p class="callout" id="audit-note" hidden></p>
+
+    <section class="panel"><h2>Per day, all devices</h2><div class="chart" id="chart" role="img" aria-label="Blocks and warnings per day"></div></section>
+
+    <section class="panel">
+      <h2>Devices</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Device</th><th>Mode</th><th class="num">Blocked</th><th class="num">Warned</th><th class="num">Sign-in codes</th><th class="num">Copied anyway</th><th>Last stopped</th><th>Exported</th></tr></thead>
+        <tbody id="devices"></tbody>
+      </table></div>
+      <p class="muted" style="margin-top:8px">Devices with "copied anyway" are where a short talk helps most: someone saw a warning and went ahead.</p>
+    </section>
+
+    <div class="two">
+      <section class="panel">
+        <h2>Lure sites</h2>
+        <p class="muted">Pages where commands were blocked, by how many devices met them. Shown defanged.</p>
+        <div class="table-wrap"><table><thead><tr><th>Site</th><th class="num">Devices</th><th class="num">Times</th></tr></thead><tbody id="hosts"></tbody></table></div>
+        <div class="actions" style="justify-content:flex-start"><button id="copy-hosts">Copy as a DNS blocklist</button><span id="copied" class="muted" hidden>Copied.</span></div>
+      </section>
+      <section class="panel">
+        <h2>Campaigns</h2>
+        <p class="muted">The same clipboard item (matched by fingerprint, not content) stopped on more than one device.</p>
+        <div class="table-wrap"><table><thead><tr><th>Fingerprint</th><th class="num">Devices</th><th>Seen on</th></tr></thead><tbody id="campaigns"></tbody></table></div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>Why things were stopped</h2>
+      <div class="table-wrap"><table><thead><tr><th>Reason</th><th class="num">Times</th></tr></thead><tbody id="reasons"></tbody></table></div>
+      <div class="actions" style="justify-content:flex-start"><button id="export-csv">Download all events (.csv)</button></div>
+    </section>
+  </div>
+
+  <footer>This page cannot connect to the internet (its Content-Security-Policy forbids it). Exports contain fingerprints and metadata, never clipboard text.</footer>
+</main>
+<script src="fleet.js"></script>
+</body>
+</html>

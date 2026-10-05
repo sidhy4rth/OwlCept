@@ -2,8 +2,7 @@
 // fleet export and every setting. Everything is rendered with textContent;
 // hosts and URLs in the log came from web pages and are treated as untrusted.
 
-import { buildReport, summarize, type ActivityEvent } from '@owlcept/engine';
-import { label } from './labels.ts';
+import { buildReport, reasonLabel as label, summarize, type ActivityEvent } from '@owlcept/engine';
 import type { PopupState, Settings } from './messages.ts';
 import { defang, normalizeSite, reportUrl, type Mode } from './policy.ts';
 import { saveSettings } from './settings-store.ts';

@@ -137,3 +137,110 @@ export function summarize(events: ActivityEvent[], opts: { now?: number; days?: 
     repeatedHashes: top(hashes, 50).filter(([, n]) => n > 1).slice(0, 8),
   };
 }
+
+// ------------------------------------------------------------------ fleet
+
+export interface DeviceRow {
+  id: string;
+  label: string;
+  mode: string;
+  version: string;
+  exported: string;
+  blocked: number;
+  warned: number;
+  consentfix: number;
+  overrides: number;
+  silent: number;
+  lastEvent: number | null;
+}
+
+export interface FleetSummary extends Summary {
+  devices: DeviceRow[];
+  /** Clipboard items (by fingerprint) stopped on two or more devices. */
+  campaigns: { hash: string; devices: number; events: number; hosts: string[] }[];
+  /** Hosts of blocked pages, ranked by how many devices met them. */
+  lureHosts: { host: string; devices: number; events: number }[];
+  /** Blocks logged by devices in audit mode: what enforcement would have stopped. */
+  auditWouldBlock: number;
+}
+
+/** One report per device (the latest export wins), with events from older exports of the same device folded in. */
+export function mergeReports(reports: ActivityReport[]): ActivityReport[] {
+  const byDevice = new Map<string, ActivityReport>();
+  for (const r of [...reports].sort((a, b) => a.exported.localeCompare(b.exported))) {
+    const prev = byDevice.get(r.device.id);
+    const seen = new Set<string>();
+    const events: ActivityEvent[] = [];
+    for (const e of [...r.events, ...(prev?.events ?? [])]) {
+      const key = `${e.time}|${e.kind}|${e.host}|${e.hash ?? ''}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        events.push(e);
+      }
+    }
+    byDevice.set(r.device.id, { ...r, device: { ...r.device, label: r.device.label || prev?.device.label || '' }, events: events.sort((a, b) => b.time - a.time) });
+  }
+  return [...byDevice.values()];
+}
+
+export function summarizeFleet(reports: ActivityReport[], opts: { now?: number; days?: number } = {}): FleetSummary {
+  const now = opts.now ?? Date.now();
+  const days = opts.days ?? 30;
+  const since = now - days * 86_400_000;
+  const merged = mergeReports(reports);
+  const all = merged.flatMap((r) => r.events);
+  const base = summarize(all, { now, days });
+
+  const campaign = new Map<string, { devices: Set<string>; events: number; hosts: Set<string> }>();
+  const lure = new Map<string, { devices: Set<string>; events: number }>();
+  let auditWouldBlock = 0;
+  const devices: DeviceRow[] = merged.map((r) => {
+    const recent = r.events.filter((e) => e.time >= since && e.time <= now + 60_000);
+    const s = summarize(recent, { now, days });
+    for (const e of recent) {
+      if (e.kind === 'override') continue;
+      if (e.hash) {
+        const c = campaign.get(e.hash) ?? { devices: new Set(), events: 0, hosts: new Set() };
+        c.devices.add(r.device.id);
+        c.events++;
+        if (e.host) c.hosts.add(e.host);
+        campaign.set(e.hash, c);
+      }
+      if ((e.kind === 'copy-block' || e.kind === 'consentfix') && e.host) {
+        const l = lure.get(e.host) ?? { devices: new Set(), events: 0 };
+        l.devices.add(r.device.id);
+        l.events++;
+        lure.set(e.host, l);
+      }
+      if (e.note === 'audit' && (e.kind === 'copy-block' || e.kind === 'consentfix')) auditWouldBlock++;
+    }
+    return {
+      id: r.device.id,
+      label: r.device.label,
+      mode: r.mode,
+      version: r.app.version,
+      exported: r.exported,
+      blocked: s.blocked,
+      warned: s.warned,
+      consentfix: s.consentfix,
+      overrides: s.overrides,
+      silent: s.silent,
+      lastEvent: recent.length ? Math.max(...recent.map((e) => e.time)) : null,
+    };
+  });
+
+  return {
+    ...base,
+    devices: devices.sort((a, b) => b.blocked + b.consentfix - (a.blocked + a.consentfix) || a.label.localeCompare(b.label)),
+    campaigns: [...campaign]
+      .filter(([, c]) => c.devices.size > 1)
+      .map(([hash, c]) => ({ hash, devices: c.devices.size, events: c.events, hosts: [...c.hosts].sort() }))
+      .sort((a, b) => b.devices - a.devices || b.events - a.events)
+      .slice(0, 20),
+    lureHosts: [...lure]
+      .map(([host, l]) => ({ host, devices: l.devices.size, events: l.events }))
+      .sort((a, b) => b.devices - a.devices || b.events - a.events || a.host.localeCompare(b.host))
+      .slice(0, 50),
+    auditWouldBlock,
+  };
+}

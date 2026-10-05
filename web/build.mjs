@@ -7,8 +7,8 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 cpSync(new URL('./static/', import.meta.url).pathname, out, { recursive: true });
 await build({
-  entryPoints: ['src/main.ts'],
-  outfile: `${out}app.js`,
+  entryPoints: { app: 'src/main.ts', fleet: 'src/fleet.ts' },
+  outdir: out,
   bundle: true,
   format: 'iife',
   target: ['chrome90', 'safari15', 'firefox100'],

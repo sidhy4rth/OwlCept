@@ -26,6 +26,9 @@ jobs:
       - run: npm ci
       - run: npm run typecheck -w @owlcept/web
       - run: npm run build -w @owlcept/web
+      - run: npx playwright install --with-deps chromium
+      - name: Check the pages in Chromium (fleet view merges exports, no requests leave)
+        run: node scripts/web-e2e.mjs
       - uses: actions/upload-artifact@v7
         with:
           name: owlcept-web

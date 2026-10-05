@@ -1,7 +1,7 @@
 // Short labels for finding ids, used in the popup and the dashboard lists.
 // The full sentences people read in a warning come from the engine's explain().
 
-export const REASON: Record<string, string> = {
+export const REASON_LABELS: Record<string, string> = {
   'hidden-copy': 'copied text was hidden',
   'lure-words': 'page said to press Win+R',
   'fake-captcha': 'fake CAPTCHA',
@@ -38,4 +38,4 @@ export const REASON: Record<string, string> = {
   'from-ai': 'came from a chatbot answer',
 };
 
-export const label = (id: string): string => REASON[id] ?? id.replace(/-/g, ' ');
+export const reasonLabel = (id: string): string => REASON_LABELS[id] ?? id.replace(/-/g, ' ');

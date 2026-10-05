@@ -50,3 +50,33 @@ test('parseReport keeps only known, well-formed fields', () => {
   assert.deepEqual(r.events[0], { time: 1, kind: 'copy-block', host: 'a.test', ids: ['x', 'y'] });
   assert.equal(r.device.label.length, 80);
 });
+
+import { mergeReports, summarizeFleet, type ActivityReport } from '../src/index.ts';
+
+const report = (id: string, label: string, exported: string, mode: string, evs: ActivityEvent[]): ActivityReport =>
+  buildReport(evs, { id, label }, { name: 'OwlCept extension', version: '0.2.0' }, mode, new Date(exported));
+
+test('mergeReports keeps one report per device and folds in older exports', () => {
+  const a1 = report('a', 'Lab 1', '2026-10-01T00:00:00Z', 'smart', [events[1], events[2]]);
+  const a2 = report('a', '', '2026-10-05T00:00:00Z', 'strict', [events[0], events[1]]);
+  const merged = mergeReports([a2, a1]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].mode, 'strict');
+  assert.equal(merged[0].device.label, 'Lab 1');
+  assert.equal(merged[0].events.length, 3);
+});
+
+test('summarizeFleet finds campaigns across devices, ranks lure hosts and counts audit near-misses', () => {
+  const shared: ActivityEvent = { time: NOW - 5000, kind: 'copy-block', host: 'verify.example-lure.test', ids: ['download-exec'], hash: 'c'.repeat(64) };
+  const fleet = summarizeFleet([
+    report('a', 'Lab 1', '2026-10-05T00:00:00Z', 'smart', [shared, events[2]]),
+    report('b', 'Lab 2', '2026-10-05T00:00:00Z', 'audit', [{ ...shared, time: NOW - 9000, note: 'audit' }]),
+    report('c', 'Office', '2026-10-05T00:00:00Z', 'smart', [events[3]]),
+  ], { now: NOW, days: 30 });
+  assert.equal(fleet.devices.length, 3);
+  assert.deepEqual(fleet.campaigns, [{ hash: 'c'.repeat(64), devices: 2, events: 2, hosts: ['verify.example-lure.test'] }]);
+  assert.deepEqual(fleet.lureHosts[0], { host: 'verify.example-lure.test', devices: 2, events: 2 });
+  assert.equal(fleet.auditWouldBlock, 1);
+  assert.equal(fleet.devices[0].blocked + fleet.devices[0].consentfix, 1);
+  assert.equal(fleet.blocked, 2);
+});

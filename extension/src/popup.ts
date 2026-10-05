@@ -1,7 +1,7 @@
 import type { OwlEvent, PopupState, Settings } from './messages.ts';
 import type { LangSetting } from './strings.ts';
 import { isTrusted, normalizeSite, type Mode } from './policy.ts';
-import { REASON } from './labels.ts';
+import { REASON_LABELS as REASON } from '@owlcept/engine';
 import { saveSettings } from './settings-store.ts';
 
 

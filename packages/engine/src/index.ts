@@ -11,7 +11,8 @@ export { explain } from './explain.ts';
 export { detectLureText, isRealCaptchaSource } from './lure.ts';
 export { checkOAuthPaste, detectOAuthCode, explainConsentFix } from './oauth.ts';
 export { BLOCK_AT, WARN_AT } from './score.ts';
-export { buildReport, parseReport, summarize, type ActivityEvent, type ActivityKind, type ActivityReport, type Summary } from './activity.ts';
+export { buildReport, mergeReports, parseReport, summarize, summarizeFleet, type ActivityEvent, type ActivityKind, type ActivityReport, type DeviceRow, type FleetSummary, type Summary } from './activity.ts';
+export { REASON_LABELS, reasonLabel } from './labels.ts';
 export { classifySource, type SourceCategory, type SourceInfo } from './source.ts';
 
 /**

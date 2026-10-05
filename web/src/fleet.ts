@@ -1,0 +1,191 @@
+// OwlCept fleet view: merges activity exports from many devices, entirely in
+// the browser. Imported files are untrusted (parseReport keeps only known
+// fields), and everything is rendered with textContent.
+
+import { parseReport, reasonLabel, summarizeFleet, type ActivityEvent, type ActivityReport } from '@owlcept/engine';
+
+const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLElementTagNameMap[K]> = {}, ...kids: (Node | string)[]) => {
+  const n = Object.assign(document.createElement(tag), props);
+  n.append(...kids);
+  return n;
+};
+const defang = (s: string) => s.replace(/\./g, '[.]');
+const when = (t: number | null) => (t ? new Date(t).toLocaleString() : '—');
+
+let reports: ActivityReport[] = [];
+let days = 30;
+
+// ------------------------------------------------------------------ loading
+
+async function addFiles(files: FileList | File[]): Promise<void> {
+  for (const f of [...files]) {
+    if (f.size > 20 * 1024 * 1024) {
+      note(`${f.name}: larger than 20 MB, skipped`, true);
+      continue;
+    }
+    try {
+      const r = parseReport(await f.text());
+      reports.push(r);
+      note(`${f.name}: ${r.device.label || r.device.id.slice(0, 8)}, ${r.events.length} events`, false);
+    } catch (e) {
+      note(`${f.name}: ${(e as Error).message}`, true);
+    }
+  }
+  render();
+}
+
+function note(text: string, err: boolean): void {
+  $('files').append(el('li', { textContent: text, className: err ? 'err' : '' }));
+}
+
+// Three fictional lab PCs, so the page can be tried without real exports.
+function sampleReports(): ActivityReport[] {
+  const day = 86_400_000;
+  const now = Date.now();
+  const campaign = 'd'.repeat(64);
+  const mk = (id: string, label: string, mode: string, evs: Omit<ActivityEvent, 'ids'>[], ids: string[][]): ActivityReport => ({
+    format: 'owlcept-activity', version: 1, device: { id, label }, exported: new Date(now).toISOString(), app: { name: 'OwlCept extension', version: '0.2.0' }, mode,
+    events: evs.map((e, i) => ({ ...e, ids: ids[i % ids.length] })),
+  });
+  const lure = (host: string, t: number, extra: Partial<ActivityEvent> = {}): Omit<ActivityEvent, 'ids'> => ({ time: now - t, kind: 'copy-block', host, hash: campaign, url: `https://${host}/verify`, ...extra });
+  return [
+    mk('lab-1', 'Library PC 1', 'smart', [lure('verify-human.example-lure.test', 2 * day), lure('cdn-check.example-lure.test', 9 * day, { hash: 'e'.repeat(64) }), { time: now - 3 * day, kind: 'copy-warn', host: 'scripts.example.test' }],
+      [['download-exec', 'hidden-copy', 'lure-words'], ['remote-script-host', 'fake-captcha'], ['persistence']]),
+    mk('lab-2', 'Library PC 2', 'smart', [lure('verify-human.example-lure.test', 2 * day + 3600_000), { time: now - 2 * day, kind: 'override', host: 'scripts.example.test' }, { time: now - 5 * day, kind: 'consentfix', host: 'connect.example-lure.test', url: 'https://connect.example-lure.test/link' }],
+      [['download-exec', 'hidden-copy'], ['persistence'], ['consentfix', 'Microsoft']]),
+    mk('hostel-7', 'Hostel desk', 'audit', [lure('verify-human.example-lure.test', 1 * day, { note: 'audit' }), lure('update-now.example-lure.test', 12 * day, { hash: 'f'.repeat(64), note: 'audit' })],
+      [['download-exec', 'lure-words'], ['decoy-comment', 'obfuscated']]),
+  ];
+}
+
+// ------------------------------------------------------------------ rendering
+
+function render(): void {
+  $('report').hidden = reports.length === 0;
+  $('reset').hidden = reports.length === 0;
+  if (!reports.length) return;
+  const f = summarizeFleet(reports, { days });
+
+  $('n-devices').textContent = String(f.devices.length);
+  $('n-blocked').textContent = String(f.blocked);
+  $('n-warned').textContent = String(f.warned);
+  $('n-consentfix').textContent = String(f.consentfix);
+  $('n-overrides').textContent = String(f.overrides);
+
+  const auditDevices = f.devices.filter((d) => d.mode === 'audit').length;
+  $('audit-note').hidden = !auditDevices;
+  $('audit-note').textContent = `${auditDevices} device${auditDevices === 1 ? ' is' : 's are'} in audit mode. Switched to smart, OwlCept would have stopped ${f.auditWouldBlock} more command${f.auditWouldBlock === 1 ? '' : 's'} there.`;
+
+  chart(f.byDay);
+
+  $('devices').replaceChildren(
+    ...f.devices.map((d) =>
+      el('tr', {},
+        el('td', {}, el('b', { textContent: d.label || 'Unnamed device' }), el('div', { className: 'mono', textContent: d.id.slice(0, 13) })),
+        el('td', {}, el('span', { className: `tag ${d.mode}`, textContent: d.mode || '?' })),
+        el('td', { className: `num ${d.blocked ? 'hot' : ''}`, textContent: String(d.blocked) }),
+        el('td', { className: 'num', textContent: String(d.warned) }),
+        el('td', { className: 'num', textContent: String(d.consentfix) }),
+        el('td', { className: `num ${d.overrides ? 'overr' : ''}`, textContent: String(d.overrides) }),
+        el('td', { textContent: when(d.lastEvent) }),
+        el('td', { textContent: d.exported ? new Date(d.exported).toLocaleDateString() : '—' }),
+      ),
+    ),
+  );
+
+  const empty = (cols: number, text: string) => el('tr', {}, el('td', { colSpan: cols, className: 'muted', textContent: text }));
+  $('hosts').replaceChildren(
+    ...(f.lureHosts.length
+      ? f.lureHosts.slice(0, 15).map((h) => el('tr', {}, el('td', { className: 'mono', textContent: defang(h.host) }), el('td', { className: 'num', textContent: String(h.devices) }), el('td', { className: 'num', textContent: String(h.events) })))
+      : [empty(3, 'No blocked pages in this period.')]),
+  );
+  $('campaigns').replaceChildren(
+    ...(f.campaigns.length
+      ? f.campaigns.map((c) => el('tr', {}, el('td', { className: 'mono', textContent: `${c.hash.slice(0, 16)}…` }), el('td', { className: 'num', textContent: String(c.devices) }), el('td', { className: 'mono', textContent: c.hosts.map(defang).join(', ') })))
+      : [empty(3, 'No item was stopped on more than one device.')]),
+  );
+  $('reasons').replaceChildren(
+    ...(f.topReasons.length ? f.topReasons.map(([id, n]) => el('tr', {}, el('td', { textContent: reasonLabel(id) }), el('td', { className: 'num', textContent: String(n) }))) : [empty(2, 'Nothing in this period.')]),
+  );
+}
+
+function chart(byDay: { day: string; blocked: number; warned: number }[]): void {
+  const ns = 'http://www.w3.org/2000/svg';
+  const W = 1000, H = 140, pad = 16;
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  const css = getComputedStyle(document.documentElement);
+  const max = Math.max(1, ...byDay.map((d) => d.blocked + d.warned));
+  const bw = W / byDay.length;
+  const bar = (x: number, y: number, w: number, h: number, color: string, title: string) => {
+    const r = document.createElementNS(ns, 'rect');
+    for (const [k, v] of Object.entries({ x, y, width: w, height: h, rx: Math.min(3, w / 4), fill: css.getPropertyValue(color) })) r.setAttribute(k, String(v));
+    const t = document.createElementNS(ns, 'title');
+    t.textContent = title;
+    r.append(t);
+    svg.append(r);
+  };
+  byDay.forEach((d, i) => {
+    const s = (H - pad) / max;
+    const x = i * bw + bw * 0.15, w = bw * 0.7, title = `${d.day}: ${d.blocked} blocked, ${d.warned} warned`;
+    if (d.blocked) bar(x, H - pad - d.blocked * s, w, d.blocked * s, '--red', title);
+    if (d.warned) bar(x, H - pad - (d.blocked + d.warned) * s, w, d.warned * s, '--amber', title);
+    if (!d.blocked && !d.warned) bar(x, H - pad - 2, w, 2, '--line', title);
+  });
+  $('chart').replaceChildren(svg);
+}
+
+function exportCsv(): void {
+  const cell = (v: string) => `"${(/^[=+\-@\t\r]/.test(v) ? `'${v}` : v).replace(/"/g, '""')}"`;
+  const rows = reports.flatMap((r) => r.events.map((e) => [r.device.label, r.device.id, new Date(e.time).toISOString(), e.kind, e.host, e.ids.join(' '), e.note ?? '', e.url ?? '', e.hash ?? ''].map(cell).join(',')));
+  const body = ['device,device_id,time,kind,host,reasons,note,url,hash', ...rows].join('\r\n');
+  const url = URL.createObjectURL(new Blob([body], { type: 'text/csv' }));
+  el('a', { href: url, download: `owlcept-fleet-${new Date().toISOString().slice(0, 10)}.csv` }).click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ------------------------------------------------------------------ wiring
+
+const drop = $('drop');
+drop.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  drop.classList.add('over');
+});
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', (e) => {
+  e.preventDefault();
+  drop.classList.remove('over');
+  if (e.dataTransfer?.files.length) void addFiles(e.dataTransfer.files);
+});
+$('pick').addEventListener('click', () => $<HTMLInputElement>('file').click());
+$<HTMLInputElement>('file').addEventListener('change', (e) => {
+  const input = e.target as HTMLInputElement;
+  if (input.files) void addFiles(input.files).then(() => (input.value = ''));
+});
+$('sample').addEventListener('click', () => {
+  reports.push(...sampleReports());
+  note('Sample data: three fictional devices', false);
+  render();
+});
+$('reset').addEventListener('click', () => {
+  reports = [];
+  $('files').replaceChildren();
+  render();
+});
+for (const b of document.querySelectorAll<HTMLButtonElement>('.range button')) {
+  b.addEventListener('click', () => {
+    days = Number(b.dataset.days);
+    document.querySelectorAll('.range button').forEach((x) => x.classList.toggle('on', x === b));
+    render();
+  });
+}
+$('copy-hosts').addEventListener('click', () => {
+  const f = summarizeFleet(reports, { days });
+  void navigator.clipboard.writeText(f.lureHosts.map((h) => `0.0.0.0 ${h.host}`).join('\n')).then(() => {
+    $('copied').hidden = false;
+    setTimeout(() => ($('copied').hidden = true), 2000);
+  });
+});
+$('export-csv').addEventListener('click', exportCsv);
