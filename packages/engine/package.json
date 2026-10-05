@@ -1,6 +1,6 @@
 {
   "name": "@owlcept/engine",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Command-risk and plain-language explanation engine for OwlCept.",
   "license": "MIT",
   "type": "module",
@@ -16,5 +16,8 @@
   "devDependencies": {
     "@types/node": "^26.6.4",
     "typescript": "^5.9.3"
+  },
+  "bin": {
+    "owlcept": "dist/owlcept.mjs"
   }
 }

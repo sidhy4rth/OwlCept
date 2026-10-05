@@ -14,7 +14,8 @@
     "test:browser": "node scripts/ext-e2e.mjs && node scripts/web-e2e.mjs",
     "build": "npm run build -w @owlcept/extension && npm run build -w @owlcept/web",
     "logo": "node scripts/logo.mjs --render",
-    "bench": "node bench/run.ts"
+    "bench": "node bench/run.ts",
+    "owlcept": "node packages/engine/cli/owlcept.ts"
   },
   "devDependencies": {
     "playwright": "^1.63.0"

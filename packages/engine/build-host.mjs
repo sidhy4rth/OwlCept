@@ -11,3 +11,15 @@ await build({
   legalComments: 'none',
   logLevel: 'info',
 });
+
+// dist/owlcept.mjs: the command-line tool as one file (Node 18+), attached to releases.
+await build({
+  entryPoints: [new URL('./cli/owlcept.ts', import.meta.url).pathname],
+  outfile: new URL('./dist/owlcept.mjs', import.meta.url).pathname,
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: 'node18',
+  legalComments: 'none',
+  logLevel: 'info',
+});

@@ -12,5 +12,5 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "include": ["src", "test", "host"]
+  "include": ["src", "test", "host", "cli"]
 }
