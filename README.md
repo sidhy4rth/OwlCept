@@ -31,7 +31,7 @@
 ![Offline](https://img.shields.io/badge/clipboard_text-never_leaves_the_device-15803D)
 ![Languages](https://img.shields.io/badge/warnings-English_·_Hindi_·_Kannada-B91C1C)
 ![False prompts](https://img.shields.io/badge/false_prompts-0_of_650_documented_commands-15803D)
-![Latency](https://img.shields.io/badge/engine_p95-0.01_ms-0F172A)
+![Latency](https://img.shields.io/badge/engine_p95-under_0.1_ms-0F172A)
 
 [**Download**](https://github.com/sidhy4rth/OwlCept/releases/latest) ·
 [**How it works**](#how-it-works) ·

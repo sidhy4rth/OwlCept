@@ -223,7 +223,10 @@ writeFileSync(`${root}bench/results/latest.json`, `${JSON.stringify(results, nul
 
 const table = (head: string[], rows: (string | number)[][]) =>
   [`| ${head.join(' | ')} |`, `|${head.map(() => '---').join('|')}|`, ...rows.map((r) => `| ${r.join(' | ')} |`)].join('\n');
-const escape = (t: string) => t.replace(/\|/g, '\\|').replace(/\n/g, ' ⏎ ');
+// Commands go into table cells as HTML <code>: every character that HTML, the table
+// (|) or Markdown (` \ *) would interpret is written as an entity.
+const codeCell = (t: string) =>
+  `<code>${t.replace(/[&<>"'|`\\*_[\]]/g, (c) => `&#${c.charCodeAt(0)};`).replace(/\r?\n/g, ' ⏎ ')}</code>`;
 
 const md = `# OwlCept benchmark
 
@@ -240,13 +243,13 @@ Each command is run through every checkpoint that would see it: copy (extension)
 
 ${table(['Group', 'Commands', 'False prompts'], byGroup(benign, (o) => o.prompted).map(([g, c]) => [g, c.n, c.hit ? `**${c.hit}**` : 0]))}
 
-${falsePrompts.length ? `### Commands that prompted\n\n${table(['Id', 'Command', 'Checkpoints'], falsePrompts.map((o) => [o.sample.id, `\`${escape(o.sample.text).slice(0, 110)}\``, o.checkpoints.filter((c) => c.action !== 'allow').map((c) => `${c.name}: ${c.action} ${c.risk}`).join(', ')]))}\n` : 'No benign command prompted at any checkpoint.\n'}
+${falsePrompts.length ? `### Commands that prompted\n\n${table(['Id', 'Command', 'Checkpoints'], falsePrompts.map((o) => [o.sample.id, codeCell(o.sample.text.slice(0, 110)), o.checkpoints.filter((c) => c.action !== 'allow').map((c) => `${c.name}: ${c.action} ${c.risk}`).join(', ')]))}\n` : 'No benign command prompted at any checkpoint.\n'}
 **Content only** (no custody record, as for a command typed by hand): ${contentOnlyFalse.length} of ${benign.length} would prompt (${fmt(pct(contentOnlyFalse.length, benign.length))}). Provenance is what keeps developers' installers silent; without it the engine leans cautious.
 
 ${malicious.length ? `## Malicious corpus: ${malicious.length} samples\n\n${table(['Group', 'Samples', 'Detected'], byGroup(malicious, (o) => o.prompted).map(([g, c]) => [g, c.n, `${c.hit} (${fmt(pct(c.hit, c.n))})`]))}\n\n${[...suites].map(([k, m]) => `### Suite: ${k}\n\n${table(['Variant', 'Samples', 'Detected'], [...m].map(([v, c]) => [v, c.n, `${c.hit} (${fmt(pct(c.hit, c.n))})`]))}`).join('\n\n')}\n` : ''}
 ## Latency
 
-Engine time per call, ${REPEATS} runs per sample after warm-up, on the CI runner. The agent's own overhead (hooking, UI Automation) comes on top and is timed inside the agent.
+Engine time per call, ${REPEATS} runs per sample after warm-up, on the machine that ran the benchmark (CI runs it on every push). The agent's own overhead (hooking, UI Automation) comes on top and is timed inside the agent.
 
 ${table(['Checkpoint', 'p50', 'p95', 'max'], [['Paste', latency.paste.p50.toFixed(3), latency.paste.p95.toFixed(3), latency.paste.max.toFixed(3)], ['Commit', latency.commit.p50.toFixed(3), latency.commit.p95.toFixed(3), latency.commit.max.toFixed(3)]].map((r) => [r[0], `${r[1]} ms`, `${r[2]} ms`, `${r[3]} ms`]))}
 

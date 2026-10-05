@@ -46,12 +46,12 @@ No benign command prompted at any checkpoint.
 
 ## Latency
 
-Engine time per call, 5 runs per sample after warm-up, on the CI runner. The agent's own overhead (hooking, UI Automation) comes on top and is timed inside the agent.
+Engine time per call, 5 runs per sample after warm-up, on the machine that ran the benchmark (CI runs it on every push). The agent's own overhead (hooking, UI Automation) comes on top and is timed inside the agent.
 
 | Checkpoint | p50 | p95 | max |
 |---|---|---|---|
-| Paste | 0.005 ms | 0.013 ms | 0.192 ms |
-| Commit | 0.005 ms | 0.012 ms | 0.206 ms |
+| Paste | 0.005 ms | 0.012 ms | 0.128 ms |
+| Commit | 0.005 ms | 0.010 ms | 0.126 ms |
 
 ## Explanations
 
