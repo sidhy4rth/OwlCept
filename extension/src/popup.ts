@@ -12,6 +12,10 @@ const REASON: Record<string, string> = {
   obfuscated: 'disguised command',
   'hidden-window': 'runs invisibly',
   consentfix: 'sign-in code pasted into another site',
+  'from-chat': 'came from a chat',
+  'from-email': 'came from an email',
+  'from-pdf': 'came from a PDF',
+  'from-ai': 'came from a chatbot answer',
 };
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;

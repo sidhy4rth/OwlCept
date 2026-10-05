@@ -12,7 +12,7 @@ const IDS = [
   'temp-exec', 'exec-policy-bypass', 'mac-quarantine-strip', 'password-prompt', 'decode-to-shell',
   'reverse-shell', 'browser-data', 'ip-address', 'risky-domain', 'staging-host', 'network-share',
   'plain-http', 'decoy-comment', 'decoy-path', 'obfuscated', 'hidden-copy', 'script-copy', 'lure-words',
-  'lure-words-nearby', 'fake-captcha', 'from-app', 'target-run', 'target-explorer', 'same-site', 'docs-site',
+  'lure-words-nearby', 'fake-captcha', 'from-app', 'from-chat', 'from-email', 'from-pdf', 'from-ai', 'target-run', 'target-explorer', 'same-site', 'docs-site',
 ];
 
 const verdictWith = (f: Finding, action: Verdict['action'] = 'warn'): Verdict => ({

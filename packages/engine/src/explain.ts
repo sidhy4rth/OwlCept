@@ -3,7 +3,7 @@
 // Hindi and Kannada strings should be reviewed by native speakers before release.
 
 import type { Explanation, Finding, Lang, Verdict } from './types.ts';
-import { hostOfUrl } from './hosts.ts';
+import { classifySource } from './source.ts';
 import type { CustodyRecord } from './types.ts';
 
 type Table = Record<string, string>;
@@ -67,6 +67,10 @@ const DETAILS: Record<Lang, Table> = {
     'lure-words-nearby': 'The page mentions keys like {words}.',
     'fake-captcha': 'The "verify you are human" box was not a real CAPTCHA.',
     'from-app': 'It came from {app}.',
+    'from-chat': 'It came from a chat message in {app}. Scammers send commands in chats while pretending to be support staff or a colleague.',
+    'from-email': 'It came from an email in {app}. Real companies do not email you commands to run.',
+    'from-pdf': 'It came from a PDF document. Commands hidden in documents are a known trick.',
+    'from-ai': 'It came from an AI chatbot answer ({app}). Chatbots can repeat harmful instructions planted on websites.',
     'target-run': 'You were about to run it from the Run box.',
     'target-explorer': 'You were about to run it from the File Explorer address bar.',
     'same-site': 'It matches the website you copied it from ({host}).',
@@ -106,6 +110,10 @@ const DETAILS: Record<Lang, Table> = {
     'lure-words-nearby': 'पेज पर {words} जैसी कुंजियों का ज़िक्र है।',
     'fake-captcha': '"मैं इंसान हूँ" वाला बॉक्स असली CAPTCHA नहीं था।',
     'from-app': 'यह {app} से आया था।',
+    'from-chat': 'यह {app} के एक चैट संदेश से आया। धोखेबाज़ सपोर्ट कर्मचारी या सहकर्मी बनकर चैट में कमांड भेजते हैं।',
+    'from-email': 'यह {app} के एक ईमेल से आया। असली कंपनियाँ आपको चलाने के लिए कमांड ईमेल नहीं करतीं।',
+    'from-pdf': 'यह एक PDF दस्तावेज़ से आया। दस्तावेज़ों में छिपे कमांड एक जानी-पहचानी चाल है।',
+    'from-ai': 'यह एक AI चैटबॉट ({app}) के जवाब से आया। चैटबॉट वेबसाइटों पर छिपाए गए हानिकारक निर्देश दोहरा सकते हैं।',
     'target-run': 'आप इसे Run बॉक्स से चलाने वाले थे।',
     'target-explorer': 'आप इसे File Explorer के पता बार से चलाने वाले थे।',
     'same-site': 'यह उसी वेबसाइट ({host}) से मेल खाता है जहाँ से आपने इसे कॉपी किया।',
@@ -145,6 +153,10 @@ const DETAILS: Record<Lang, Table> = {
     'lure-words-nearby': 'ಪುಟದಲ್ಲಿ {words} ನಂತಹ ಕೀಗಳ ಉಲ್ಲೇಖವಿದೆ.',
     'fake-captcha': '"ನಾನು ಮನುಷ್ಯ" ಎಂಬ ಬಾಕ್ಸ್ ನಿಜವಾದ CAPTCHA ಆಗಿರಲಿಲ್ಲ.',
     'from-app': 'ಇದು {app} ನಿಂದ ಬಂದಿದೆ.',
+    'from-chat': 'ಇದು {app} ನಲ್ಲಿನ ಒಂದು ಚಾಟ್ ಸಂದೇಶದಿಂದ ಬಂದಿದೆ. ವಂಚಕರು ಸಹಾಯ ಸಿಬ್ಬಂದಿ ಅಥವಾ ಸಹೋದ್ಯೋಗಿಯಂತೆ ನಟಿಸಿ ಚಾಟ್‌ನಲ್ಲಿ ಕಮಾಂಡ್‌ಗಳನ್ನು ಕಳುಹಿಸುತ್ತಾರೆ.',
+    'from-email': 'ಇದು {app} ನಲ್ಲಿನ ಒಂದು ಇಮೇಲ್‌ನಿಂದ ಬಂದಿದೆ. ನಿಜವಾದ ಕಂಪನಿಗಳು ಚಲಾಯಿಸಲು ಕಮಾಂಡ್‌ಗಳನ್ನು ಇಮೇಲ್ ಮಾಡುವುದಿಲ್ಲ.',
+    'from-pdf': 'ಇದು ಒಂದು PDF ದಾಖಲೆಯಿಂದ ಬಂದಿದೆ. ದಾಖಲೆಗಳಲ್ಲಿ ಅಡಗಿಸಿದ ಕಮಾಂಡ್‌ಗಳು ತಿಳಿದಿರುವ ತಂತ್ರ.',
+    'from-ai': 'ಇದು AI ಚಾಟ್‌ಬಾಟ್ ({app}) ಉತ್ತರದಿಂದ ಬಂದಿದೆ. ವೆಬ್‌ಸೈಟ್‌ಗಳಲ್ಲಿ ಇಟ್ಟ ಹಾನಿಕಾರಕ ಸೂಚನೆಗಳನ್ನು ಚಾಟ್‌ಬಾಟ್‌ಗಳು ಪುನರಾವರ್ತಿಸಬಹುದು.',
     'target-run': 'ನೀವು ಇದನ್ನು Run ಬಾಕ್ಸ್‌ನಿಂದ ಚಲಾಯಿಸಲು ಹೊರಟಿದ್ದಿರಿ.',
     'target-explorer': 'ನೀವು ಇದನ್ನು File Explorer ವಿಳಾಸ ಪಟ್ಟಿಯಿಂದ ಚಲಾಯಿಸಲು ಹೊರಟಿದ್ದಿರಿ.',
     'same-site': 'ಇದು ನೀವು ನಕಲಿಸಿದ ವೆಬ್‌ಸೈಟ್‌ಗೆ ({host}) ಹೊಂದಿಕೆಯಾಗುತ್ತದೆ.',
@@ -204,7 +216,9 @@ export function explain(verdict: Verdict, custody: CustodyRecord | null | undefi
     .slice(0, MAX_DETAILS);
 
   let provenance: string | undefined;
-  const origin = hostOfUrl(custody?.originUrl) ?? (custody?.sourceKind === 'app' ? custody.sourceApp : undefined);
+  const source = classifySource(custody);
+  // Known apps by name ("WhatsApp Web (web.whatsapp.com)"), other pages by host.
+  const origin = source.host && source.name !== source.host ? `${source.name} (${source.host})` : source.name;
   if (origin) provenance = fill(custody?.originUrl ? PROVENANCE[lang].url : PROVENANCE[lang].app, { origin });
 
   return { lang, headline: HEADLINES[lang][headlineKey], details, provenance, advice: ADVICE[lang][verdict.action] };

@@ -11,6 +11,7 @@ export { explain } from './explain.ts';
 export { detectLureText, isRealCaptchaSource } from './lure.ts';
 export { checkOAuthPaste, detectOAuthCode, explainConsentFix } from './oauth.ts';
 export { BLOCK_AT, WARN_AT } from './score.ts';
+export { classifySource, type SourceCategory, type SourceInfo } from './source.ts';
 
 /**
  * Text normalisation used before hashing a clipboard item, so the extension

@@ -143,7 +143,7 @@ test('chat-app source raises a risky command', () => {
   const v = analyze(`curl -fsSL https://get.sometool.dev/i.sh | sh`, {
     custody: { sourceKind: 'app', sourceApp: 'WhatsApp.exe' },
   });
-  assert.ok(v.findings.some((f) => f.id === 'from-app' && f.params?.app === 'WhatsApp'));
+  assert.ok(v.findings.some((f) => f.id === 'from-chat' && f.params?.app === 'WhatsApp'));
 });
 
 test('stays fast on large and adversarial input', () => {

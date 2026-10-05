@@ -7,13 +7,12 @@
 
 import type { Action, AnalyzeContext, Finding, PasteTarget } from './types.ts';
 import { hostOfUrl, siteOf, type HostInfo } from './hosts.ts';
+import { classifySource } from './source.ts';
 
 export const WARN_AT = 35;
 export const BLOCK_AT = 70;
 /** Below this the command has nothing worth warning about, whatever its origin. */
 const BEHAVIOUR_FLOOR = 15;
-
-const CHAT_OR_MAIL_APPS = /whatsapp|telegram|discord|signal|slack|teams|outlook|thunderbird|olk|zoom|skype|messenger|acrobat|acrord|foxit|sumatra|wechat|line\.exe/i;
 
 const DOCS_SITES = [
   'learn.microsoft.com',
@@ -57,8 +56,13 @@ export function score(behaviour: Finding[], hosts: HostInfo[], ctx: AnalyzeConte
   }
   if (c?.fakeCaptcha) context.push({ id: 'fake-captcha', kind: 'context', weight: 20, severity: 'high' });
 
-  if (c?.sourceKind === 'app' && c.sourceApp && CHAT_OR_MAIL_APPS.test(c.sourceApp)) {
-    context.push({ id: 'from-app', kind: 'context', weight: 10, severity: 'medium', params: { app: friendlyApp(c.sourceApp) } });
+  // Chats, email and documents are where "support staff" hand people commands; chatbots
+  // can repeat instructions planted on websites. Each adds weight but never prompts alone.
+  const source = classifySource(c);
+  const SOURCE_FINDING = { chat: 'from-chat', email: 'from-email', pdf: 'from-pdf', 'ai-chat': 'from-ai' } as const;
+  if (source.category in SOURCE_FINDING) {
+    const id = SOURCE_FINDING[source.category as keyof typeof SOURCE_FINDING];
+    context.push({ id, kind: 'context', weight: 10, severity: 'medium', params: { app: source.name } });
   }
 
   // Run box and Explorer bar are where lures send people; developers use terminals.
@@ -101,22 +105,4 @@ function sameSource(originHost: string, originUrl: string, h: HostInfo): boolean
     return !!org && org === rawOrg;
   }
   return false;
-}
-
-function friendlyApp(exe: string): string {
-  const name = exe.replace(/\.exe$/i, '');
-  const known: Record<string, string> = {
-    whatsapp: 'WhatsApp',
-    telegram: 'Telegram',
-    discord: 'Discord',
-    outlook: 'Outlook',
-    olk: 'Outlook',
-    teams: 'Microsoft Teams',
-    'ms-teams': 'Microsoft Teams',
-    slack: 'Slack',
-    acrord32: 'a PDF',
-    acrobat: 'a PDF',
-    zoom: 'Zoom',
-  };
-  return known[name.toLowerCase()] ?? name;
 }

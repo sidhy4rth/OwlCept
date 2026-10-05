@@ -364,4 +364,25 @@ const DEV: [string, string][] = [
 ];
 for (const [cmd, origin] of DEV) add(cmd, { origin, target: 'terminal' }, 'developer');
 
+// ------------------------------------------------------------------ everyday commands from chats, email and chatbots
+
+// A colleague's message, an IT desk's email, a chatbot's answer: the source adds weight,
+// so these check that ordinary commands from those places still pass silently.
+const SOURCES: [string, Partial<Sample>][] = [
+  ['https://chatgpt.com/c/1', {}], ['https://claude.ai/chat/1', {}], ['https://gemini.google.com/app/1', {}], ['https://copilot.microsoft.com/', {}],
+  ['https://web.whatsapp.com/', {}], ['https://app.slack.com/client/T1/C1', {}], ['https://teams.microsoft.com/v2/', {}], ['https://mail.google.com/mail/u/0/', {}],
+];
+const EVERYDAY = [
+  'git pull origin main', 'npm install', 'pip install pandas', 'python -m venv .venv', 'docker compose up -d', 'ipconfig /flushdns',
+  'winget install --id Microsoft.PowerToys -e', 'brew install jq', 'curl -fsSL https://bun.sh/install | bash', 'irm get.scoop.sh | iex',
+  'git checkout -b fix/login', 'Get-ExecutionPolicy -List', 'sfc /scannow', 'ssh-keygen -t ed25519 -C "you@example.com"',
+];
+EVERYDAY.forEach((cmd, i) => {
+  const [origin, extra] = SOURCES[i % SOURCES.length];
+  out.push({ id: `benign-${String(++n).padStart(4, '0')}`, label: 'benign', group: 'from-chat-mail-ai', text: cmd, target: 'terminal', origin, copy: 'manual', ...extra });
+});
+for (const [cmd, app] of [['git status', 'ms-teams.exe'], ['npm run build', 'Slack.exe'], ['ping 8.8.8.8', 'olk.exe'], ['winget upgrade --all', 'WhatsApp.exe'], ['pip install -r requirements.txt', 'Telegram.exe'], ['wsl --install', 'AcroRd32.exe']] as const) {
+  out.push({ id: `benign-${String(++n).padStart(4, '0')}`, label: 'benign', group: 'from-chat-mail-ai', text: cmd, target: 'terminal', app });
+}
+
 export const BENIGN: Sample[] = out;
