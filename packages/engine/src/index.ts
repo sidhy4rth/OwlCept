@@ -12,6 +12,15 @@ export { detectLureText, isRealCaptchaSource } from './lure.ts';
 export { checkOAuthPaste, detectOAuthCode, explainConsentFix } from './oauth.ts';
 export { BLOCK_AT, WARN_AT } from './score.ts';
 
+/**
+ * Text normalisation used before hashing a clipboard item, so the extension
+ * (which sees the copy) and the agent (which sees the paste) agree on the hash
+ * even when line endings or runs of spaces differ. The agent ports this exactly.
+ */
+export function normalizeForHash(text: string): string {
+  return text.replace(/\r\n?/g, '\n').replace(/[ \t\u00A0]+/g, ' ').replace(/ *\n */g, '\n').trim();
+}
+
 /** Longest input analysed in full; real lures are a few hundred characters. */
 const MAX_INPUT = 64 * 1024;
 

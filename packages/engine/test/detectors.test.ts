@@ -30,20 +30,32 @@ test('recognises real CAPTCHA providers only', () => {
 const MS_CALLBACK = `http://localhost:8400/?code=0.AXEA${'x'.repeat(120)}&state=abc123&session_state=s1`;
 
 test('detects pasted OAuth redirect URLs and bare codes', () => {
-  assert.deepEqual(detectOAuthCode(MS_CALLBACK), { provider: 'Microsoft', shape: 'redirect-url' });
+  assert.deepEqual(detectOAuthCode(MS_CALLBACK), { provider: 'Microsoft', shape: 'redirect-url', redirectHost: 'localhost' });
   assert.equal(detectOAuthCode(`0.AXEA${'y'.repeat(150)}`)?.shape, 'raw-code');
   assert.equal(detectOAuthCode(`4/0AY${'z'.repeat(60)}`)?.provider, 'Google');
   assert.equal(detectOAuthCode('https://example.com/search?code=python&lang=en'), null);
   assert.equal(detectOAuthCode('just some text'), null);
 });
 
-test('blocks an OAuth paste into an unrelated site, allows it where sign-in started', () => {
-  assert.equal(checkOAuthPaste(MS_CALLBACK, 'https://example-lure.test/connect', false).block, true);
-  assert.equal(checkOAuthPaste(MS_CALLBACK, 'https://app.example.dev/', true).block, false);
-  assert.equal(checkOAuthPaste('hello', 'https://example-lure.test/', false).block, false);
+test('blocks an OAuth code pasted into a site it was not issued for', () => {
+  // ConsentFix: localhost callback pasted into the attacker's page, which itself started the sign-in.
+  assert.equal(checkOAuthPaste(MS_CALLBACK, 'https://example-lure.test/connect').block, true);
+  assert.equal(checkOAuthPaste(`0.AXEA${'y'.repeat(150)}`, 'https://example-lure.test/').block, true);
+  // The app the code belongs to, a local dev server, and the identity provider itself are fine.
+  const own = `https://app.example.dev/auth/callback?code=${'c'.repeat(40)}&state=x`;
+  assert.equal(checkOAuthPaste(own, 'https://app.example.dev/settings').block, false);
+  assert.equal(checkOAuthPaste(MS_CALLBACK, 'http://localhost:3000/').block, false);
+  assert.equal(checkOAuthPaste(MS_CALLBACK, 'https://login.microsoftonline.com/common/oauth2').block, false);
+  assert.equal(checkOAuthPaste('hello', 'https://example-lure.test/').block, false);
 });
 
 test('ConsentFix explanation names the provider in every language', () => {
   const code = detectOAuthCode(MS_CALLBACK)!;
   for (const lang of ['en', 'hi', 'kn'] as const) assert.match(explainConsentFix(code, lang).detail, /Microsoft/);
+});
+
+test('custody hash normaliser ignores line-ending and spacing differences', async () => {
+  const { normalizeForHash } = await import('../src/index.ts');
+  assert.equal(normalizeForHash('a  b\r\n  c \t'), normalizeForHash('a b\nc'));
+  assert.notEqual(normalizeForHash('a b'), normalizeForHash('ab'));
 });

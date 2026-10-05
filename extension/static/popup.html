@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OwlCept</title>
+<style>
+  :root { --ink: #0F172A; --muted: #64748B; --line: #E2E8F0; --brand: #312E81; --ok: #15803D; --amber: #B45309; --bg: #fff; --chip: #F1F5F9; }
+  @media (prefers-color-scheme: dark) { :root { --ink: #E2E8F0; --muted: #94A3B8; --line: #1E293B; --bg: #0B1120; --chip: #1E293B; --ok: #4ADE80; --amber: #FBBF24; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 340px; font: 14px/1.45 "Segoe UI", "Nirmala UI", system-ui, -apple-system, sans-serif; color: var(--ink); background: var(--bg); }
+  header { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; }
+  header h1 { font-size: 17px; margin: 0; }
+  #status { margin: 0 16px; padding: 8px 10px; border-radius: 8px; background: var(--chip); color: var(--ok); font-weight: 600; }
+  #status.partial { color: var(--amber); }
+  #agent-hint { margin: 6px 16px 0; color: var(--muted); font-size: 12.5px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 16px 16px 6px; }
+  ul { list-style: none; margin: 0; padding: 0 16px; }
+  li { display: grid; grid-template-columns: auto 1fr auto; gap: 0 8px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+  li b { color: #DC2626; } li.warn b { color: var(--amber); }
+  li .host { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  li .why { grid-column: 1 / -1; color: var(--muted); font-size: 12.5px; }
+  li time { color: var(--muted); font-size: 12px; }
+  li.empty { display: block; color: var(--muted); border: 0; }
+  label { display: block; margin: 8px 16px 0; font-size: 13px; }
+  select, input { width: 100%; margin-top: 4px; font: inherit; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  footer { margin: 14px 16px 14px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+  <header>
+    <img src="icons/owl-48.png" width="32" height="32" alt="">
+    <h1>OwlCept</h1>
+  </header>
+  <p id="status">Protected</p>
+  <p id="agent-hint" hidden>Install the OwlCept Windows app to also check pastes into Run, Terminal and File Explorer.</p>
+
+  <h2>Recent</h2>
+  <ul id="events"></ul>
+
+  <h2>Settings</h2>
+  <label>Warning language
+    <select id="lang">
+      <option value="auto">Automatic</option>
+      <option value="en">English</option>
+      <option value="hi">हिन्दी (Hindi)</option>
+      <option value="kn">ಕನ್ನಡ (Kannada)</option>
+    </select>
+  </label>
+  <label>Trusted person's WhatsApp number (optional)
+    <input id="contact" inputmode="tel" placeholder="+91 98xxxxxxxx" autocomplete="off">
+  </label>
+  <footer>Clipboard text never leaves this device. OwlCept keeps only a fingerprint (hash) of what you copy, for 24 hours.</footer>
+  <script src="popup.js"></script>
+</body>
+</html>

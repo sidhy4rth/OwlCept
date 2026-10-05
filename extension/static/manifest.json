@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "OwlCept",
+  "short_name": "OwlCept",
+  "version": "0.1.0",
+  "description": "Stops fake-CAPTCHA \"paste and run\" (ClickFix) attacks and explains them in plain language. Clipboard text never leaves your device.",
+  "minimum_chrome_version": "111",
+  "permissions": ["storage", "clipboardWrite", "nativeMessaging", "alarms"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["hook.js"],
+      "world": "MAIN",
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true,
+      "match_origin_as_fallback": true
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true,
+      "match_origin_as_fallback": true
+    }
+  ],
+  "action": {
+    "default_title": "OwlCept",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/owl-16.png", "32": "icons/owl-32.png", "48": "icons/owl-48.png" }
+  },
+  "icons": { "16": "icons/owl-16.png", "32": "icons/owl-32.png", "48": "icons/owl-48.png", "128": "icons/owl-128.png" }
+}

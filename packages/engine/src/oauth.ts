@@ -8,6 +8,8 @@ export interface OAuthCode {
   provider: string;
   /** 'redirect-url' for a pasted callback URL, 'raw-code' for a bare code. */
   shape: 'redirect-url' | 'raw-code';
+  /** Host the code was issued for (the redirect URL's host); null for bare codes. */
+  redirectHost: string | null;
 }
 
 const PROVIDERS: [RegExp, string][] = [
@@ -17,6 +19,9 @@ const PROVIDERS: [RegExp, string][] = [
   [/appleid\.apple\.com/i, 'Apple'],
   [/okta\.com/i, 'Okta'],
 ];
+
+const LOOPBACK = /^(?:localhost|127\.0\.0\.1|\[::1\])$/i;
+const IDENTITY_HOST = /(?:^|\.)(?:microsoftonline\.com|live\.com|microsoft\.com|google\.com|github\.com|apple\.com|okta\.com)$/i;
 
 export function detectOAuthCode(text: string): OAuthCode | null {
   const t = text.trim();
@@ -34,14 +39,14 @@ export function detectOAuthCode(text: string): OAuthCode | null {
       params.has('state') ||
       params.has('session_state') ||
       params.has('client_info') ||
-      /^(?:localhost|127\.0\.0\.1|\[::1\])$/i.test(url.hostname) ||
+      LOOPBACK.test(url.hostname) ||
       /nativeclient|oauth|callback|redirect|auth/i.test(url.pathname);
     if (!looksLikeCallback) continue;
-    return { provider: providerOf(`${url.href} ${code}`), shape: 'redirect-url' };
+    return { provider: providerOf(`${url.href} ${code}`), shape: 'redirect-url', redirectHost: url.hostname.toLowerCase() };
   }
   // Bare Microsoft (0.A... / 1.A...) or Google (4/0A...) authorisation codes.
-  if (/^[01]\.A[A-Za-z0-9_\-.]{100,}$/.test(t)) return { provider: 'Microsoft', shape: 'raw-code' };
-  if (/^4\/0A[A-Za-z0-9_\-]{30,}$/.test(t)) return { provider: 'Google', shape: 'raw-code' };
+  if (/^[01]\.A[A-Za-z0-9_\-.]{100,}$/.test(t)) return { provider: 'Microsoft', shape: 'raw-code', redirectHost: null };
+  if (/^4\/0A[A-Za-z0-9_\-]{30,}$/.test(t)) return { provider: 'Google', shape: 'raw-code', redirectHost: null };
   return null;
 }
 
@@ -58,20 +63,25 @@ export interface OAuthPasteDecision {
 }
 
 /**
- * Decides a paste into a web page. Blocks when the text carries an OAuth code
- * and the page receiving it did not start a sign-in in this tab.
+ * Decides a paste into a web page. An authorisation code belongs to the app
+ * it was issued for (its redirect URL). Pasting it into any other site hands
+ * your account to that site, which is the ConsentFix trick. The attacker's
+ * page can start the sign-in itself, so "who started it" is not enough.
  */
-export function checkOAuthPaste(text: string, pageUrl: string, pageStartedSignIn: boolean): OAuthPasteDecision {
+export function checkOAuthPaste(text: string, pageUrl: string): OAuthPasteDecision {
   const code = detectOAuthCode(text);
   if (!code) return { block: false, code: null };
   let host = '';
   try {
-    host = new URL(pageUrl).hostname;
+    host = new URL(pageUrl).hostname.toLowerCase();
   } catch {
     /* unknown page, treat as unrelated */
   }
-  const identityPage = /(?:^|\.)(?:microsoftonline\.com|live\.com|google\.com|github\.com|apple\.com|okta\.com)$/i.test(host);
-  return { block: !pageStartedSignIn && !identityPage, code };
+  if (IDENTITY_HOST.test(host)) return { block: false, code };
+  if (code.redirectHost && (code.redirectHost === host || (LOOPBACK.test(code.redirectHost) && LOOPBACK.test(host)))) {
+    return { block: false, code };
+  }
+  return { block: true, code };
 }
 
 const CONSENTFIX_TEXT: Record<Lang, { headline: string; detail: string; advice: string }> = {

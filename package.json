@@ -3,8 +3,15 @@
   "private": true,
   "description": "OwlCept stops ClickFix-style paste-and-run attacks at copy, paste and Enter.",
   "license": "MIT",
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*",
+    "extension"
+  ],
   "scripts": {
-    "test": "npm test -w @owlcept/engine"
+    "test": "npm test -w @owlcept/engine",
+    "build": "npm run build -w @owlcept/extension"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   }
 }
