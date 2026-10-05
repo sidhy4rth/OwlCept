@@ -29,7 +29,7 @@ const MAX_INPUT = 64 * 1024;
 
 export function analyze(text: string, ctx: AnalyzeContext = {}): Verdict {
   const started = now();
-  const input = text.length > MAX_INPUT ? text.slice(0, MAX_INPUT) : text;
+  const input = fitInput(text);
   const decoded = deobfuscate(input);
   const { findings, hosts } = runRules(decoded);
   const { action, risk, context } = score(findings, hosts, ctx);
@@ -42,6 +42,19 @@ export function analyze(text: string, ctx: AnalyzeContext = {}): Verdict {
     target: ctx.target ?? 'unknown',
     ms: Math.round((now() - started) * 100) / 100,
   };
+}
+
+/**
+ * Bounds the work on huge pastes without letting padding hide the command:
+ * long whitespace runs shrink (still long enough to register as padding), and
+ * if the text is still too long both ends are kept, since a payload pushed past
+ * the limit sits at the end.
+ */
+function fitInput(text: string): string {
+  if (text.length <= MAX_INPUT) return text;
+  const squeezed = text.replace(/[ \t\u00A0\u2000-\u200B\u3000]{64,}/g, (m) => m.slice(0, 64)).replace(/\n{8,}/g, '\n'.repeat(8));
+  if (squeezed.length <= MAX_INPUT) return squeezed;
+  return `${squeezed.slice(0, (MAX_INPUT * 3) / 4)}\n${squeezed.slice(-MAX_INPUT / 4)}`;
 }
 
 function now(): number {

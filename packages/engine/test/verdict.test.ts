@@ -153,3 +153,10 @@ test('stays fast on large and adversarial input', () => {
   const nested = `'a'+`.repeat(2000) + `'b'`;
   assert.ok(analyze(nested).ms < 200);
 });
+
+test('padding past the input limit does not hide the command', () => {
+  for (const pad of [' '.repeat(100_000), '\n'.repeat(100_000), 'x'.repeat(100_000) + '\n']) {
+    const v = analyze(`${pad}powershell -c "${STAGE}"`, { target: 'terminal' });
+    assert.notEqual(v.action, 'allow', `${JSON.stringify(pad.slice(0, 3))}… padding`);
+  }
+});

@@ -50,8 +50,8 @@ Engine time per call, 5 runs per sample after warm-up, on the CI runner. The age
 
 | Checkpoint | p50 | p95 | max |
 |---|---|---|---|
-| Paste | 0.005 ms | 0.011 ms | 0.389 ms |
-| Commit | 0.004 ms | 0.009 ms | 0.105 ms |
+| Paste | 0.005 ms | 0.013 ms | 0.335 ms |
+| Commit | 0.005 ms | 0.012 ms | 0.126 ms |
 
 ## Explanations
 
